@@ -81,12 +81,6 @@ if (isset($_POST["submit_stream"])) {
     } else {
         $rArray["delay_minutes"] = 0;
     }
-    if (isset($_POST["channel_id"])) {
-        $rArray["channel_id"] = $_POST["channel_id"];
-        unset($_POST["channel_id"]);
-    } else {
-        $rArray["channel_id"] = "";
-    }
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
             $rArray[$rKey] = $rValue;

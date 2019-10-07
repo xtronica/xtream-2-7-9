@@ -167,7 +167,7 @@ if (isset($_GET["action"])) {
                 $return["uptime"] = $rWatchDog["uptime"];
                 $return["mem"] = intval($rWatchDog["total_mem_used_percent"]);
                 $return["cpu"] = intval($rWatchDog["cpu_avg"]);
-                $return["total_running_streams"] = intval(trim($rWatchDog["total_running_streams"]));
+                //$return["total_running_streams"] = intval(trim($rWatchDog["total_running_streams"]));
                 $return["bytes_received"] = intval($rWatchDog["bytes_received"]);
                 $return["bytes_sent"] = intval($rWatchDog["bytes_sent"]);
             }
@@ -181,6 +181,8 @@ if (isset($_GET["action"])) {
             $return["total_users"] = $result->num_rows;
             $result = $db->query("SELECT `server_stream_id` FROM `streams_sys` WHERE `server_id` = ".$rServerID." AND `stream_status` <> 2;");
             $return["total_streams"] = $result->num_rows;
+            $result = $db->query("SELECT `server_stream_id` FROM `streams_sys` WHERE `server_id` = ".$rServerID." AND `pid` > 0;");
+            $return["total_running_streams"] = $result->num_rows;
             $return["network_guaranteed_speed"] = $rServers[$rServerID]["network_guaranteed_speed"];
         } else {
             $rUptime = 0;
@@ -200,7 +202,7 @@ if (isset($_GET["action"])) {
                     }
                     $return["mem"] += intval($rWatchDog["total_mem_used_percent"]);
                     $return["cpu"] += intval($rWatchDog["cpu_avg"]);
-                    $return["total_running_streams"] += intval(trim($rWatchDog["total_running_streams"]));
+                    //$return["total_running_streams"] += intval(trim($rWatchDog["total_running_streams"]));
                     $return["bytes_received"] += intval($rWatchDog["bytes_received"]);
                     $return["bytes_sent"] += intval($rWatchDog["bytes_sent"]);
                 }
@@ -214,6 +216,8 @@ if (isset($_GET["action"])) {
                 $return["total_users"] = $result->num_rows;
                 $result = $db->query("SELECT `server_stream_id` FROM `streams_sys` WHERE `server_id` = ".$rServerID." AND `stream_status` <> 2;");
                 $return["total_streams"] += $result->num_rows;
+                $result = $db->query("SELECT `server_stream_id` FROM `streams_sys` WHERE `server_id` = ".$rServerID." AND `pid` > 0;");
+                $return["total_running_streams"] += $result->num_rows;
                 $return["network_guaranteed_speed"] += $rServers[$rServerID]["network_guaranteed_speed"];
             }
             $return["mem"] = intval($return["mem"] / count($rServers));

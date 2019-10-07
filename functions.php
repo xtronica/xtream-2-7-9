@@ -473,5 +473,9 @@ function secondsToTime($inputSeconds) {
 if (isset($_SESSION['user_id'])) {
     $rCategories = getCategories();
     $rServers = getStreamingServers();
+    $rServerError = False;
+    foreach ($rServers as $rServer) {
+        if ((($rServer["last_check_ago"] > 0) && ((time() - $rServer["last_check_ago"]) > 360)) OR ($rServer["status"] == 2)) { $rServerError = True; }
+    }
 }
 ?>

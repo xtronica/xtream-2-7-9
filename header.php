@@ -49,7 +49,13 @@
                             </a>
                             <!-- End mobile menu toggle-->
                         </li>
-            
+                        <?php if ($rServerError) { ?>
+                        <li class="notification-list">
+                            <a href="./servers.php" class="nav-link right-bar-toggle waves-effect text-danger">
+                                <i class="mdi mdi-wifi-strength-off noti-icon"></i>
+                            </a>
+                        </li>
+                        <?php } ?>
                         <li class="notification-list">
                             <a href="./settings.php" class="nav-link right-bar-toggle waves-effect">
                                 <i class="fe-settings noti-icon"></i>

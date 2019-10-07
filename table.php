@@ -26,7 +26,7 @@ if ($_GET["id"] == "users") {
     $table = 'users';
     $get = $_GET["id"];
     $primaryKey = 'id';
-    $extraWhere = "";
+    $extraWhere = "`is_mag` = 0 AND `is_e2` = 0";
 
     $columns = array(
         array('db' => 'id', 'dt' => 0),

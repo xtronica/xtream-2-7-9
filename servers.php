@@ -52,11 +52,17 @@ include "header.php";
                                     </thead>
                                     <tbody>
                                         <?php foreach ($rServers as $rServer) {
+                                        if (($rServer["last_check_ago"] > 0) && ((time() - $rServer["last_check_ago"]) > 360)) { $rServer["status"] = 2; } // Server Timeout
+                                        if (in_array($rServer["status"], Array(0,1))) {
+                                            $rServerText = Array(0 => "Disabled", 1 => "Online")[$rServer["status"]];
+                                        } else {
+                                            $rServerText = "Offline for ".intval((time() - $rServer["last_check_ago"])/60)." minutes";
+                                        }
                                         ?>
                                         <tr id="server-<?=$rServer["id"]?>">
                                             <td class="text-center"><?=$rServer["id"]?></td>
                                             <td><?=$rServer["server_name"]?></td>
-                                            <td class="text-center" data-toggle="tooltip" data-placement="top" title="" data-original-title="<?=Array(0 => "Disabled", 1 => "Online", 2 => "Offline")[$rServer["status"]]?>" ><i class="<?php if ($rServer["status"] == 1) { echo "btn-outline-info"; } else { echo "btn-outline-danger"; } ?> mdi mdi-<?=Array(0 => "alarm-light-outline", 1 => "check-network", 2 => "alarm-light-outline")[$rServer["status"]]?>"></i></td>
+                                            <td class="text-center" data-toggle="tooltip" data-placement="top" title="" data-original-title="<?=$rServerText?>" ><i class="<?php if ($rServer["status"] == 1) { echo "btn-outline-info"; } else { echo "btn-outline-danger"; } ?> mdi mdi-<?=Array(0 => "alarm-light-outline", 1 => "check-network", 2 => "alarm-light-outline")[$rServer["status"]]?>"></i></td>
                                             <td><?=$rServer["domain_name"]?></td>
                                             <td><?=$rServer["server_ip"]?></td>
                                             <td class="text-center"><?=count(getConnections($rServer["id"]))?> / <?=$rServer["total_clients"]?></td>

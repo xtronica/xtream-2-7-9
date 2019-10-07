@@ -85,7 +85,7 @@ if (isset($_GET["server_id"])) {
                             <div class="row">
                                 <div class="col-6">
                                     <div class="avatar-sm bg-soft-primary rounded">
-                                        <i class="fe-trending-up avatar-title font-22 text-primary"></i>
+                                        <i class="fe-trending-down avatar-title font-22 text-primary"></i>
                                     </div>
                                 </div>
                                 <div class="col-6">
@@ -113,7 +113,7 @@ if (isset($_GET["server_id"])) {
                             <div class="row">
                                 <div class="col-6">
                                     <div class="avatar-sm bg-soft-info rounded">
-                                        <i class="fe-trending-down avatar-title font-22 text-info"></i>
+                                        <i class="fe-trending-up avatar-title font-22 text-info"></i>
                                     </div>
                                 </div>
                                 <div class="col-6">
