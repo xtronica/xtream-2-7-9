@@ -294,17 +294,17 @@ if (isset($_GET["server_id"])) {
                 $(".online-users .progress-bar").css("width", rCapacity.toString() + "%");
                 $(".online-users .sr-only").html(rCapacity.toString() + "%");
                 // Network Load - Input
-                var rCapacity = Math.ceil((Math.ceil(data.bytes_received / 8) / data.network_guaranteed_speed) * 100);
+                var rCapacity = Math.ceil((Math.ceil(data.bytes_received) / data.network_guaranteed_speed) * 100);
                 if (isNaN(rCapacity)) { rCapacity = 0; }
-                $(".input-flow .entry").html($.number(Math.ceil(data.bytes_received / 8), 0));
+                $(".input-flow .entry").html($.number(Math.ceil(data.bytes_received), 0));
                 $(".input-flow .entry-percentage").html(rCapacity.toString() + "%");
                 $(".input-flow .progress-bar").prop("aria-valuenow", rCapacity);
                 $(".input-flow .progress-bar").css("width", rCapacity.toString() + "%");
                 $(".input-flow .sr-only").html(rCapacity.toString() + "%");
                 // Network Load - Output
-                var rCapacity = Math.ceil((Math.ceil(data.bytes_sent / 8) / data.network_guaranteed_speed) * 100);
+                var rCapacity = Math.ceil((Math.ceil(data.bytes_sent) / data.network_guaranteed_speed) * 100);
                 if (isNaN(rCapacity)) { rCapacity = 0; }
-                $(".output-flow .entry").html($.number(Math.ceil(data.bytes_sent / 8), 0));
+                $(".output-flow .entry").html($.number(Math.ceil(data.bytes_sent), 0));
                 $(".output-flow .entry-percentage").html(rCapacity.toString() + "%");
                 $(".output-flow .progress-bar").prop("aria-valuenow", rCapacity);
                 $(".output-flow .progress-bar").css("width", rCapacity.toString() + "%");

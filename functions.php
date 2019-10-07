@@ -1,13 +1,13 @@
 <?php
-$rRelease = 2;
+$rRelease = 1;
 
 session_start();
-set_time_limit(0);
+set_time_limit(10);
 ini_set('default_socket_timeout', 10);
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-//error_reporting(E_ERROR | E_WARNING | E_PARSE);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 define("MAIN_DIR", "/home/xtreamcodes/iptv_xtream_codes/");
 define("CONFIG_CRYPT_KEY", "5709650b0d7806074842c6de575025b1");
@@ -29,11 +29,15 @@ function xor_parse($data, $key) {
 function getTimezone() {
     global $db;
     $result = $db->query("SELECT `default_timezone` FROM `settings`;");
-    return $result->fetch_assoc()["default_timezone"];
+    if ((isset($result)) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc()["default_timezone"];
+    } else {
+        return "Europe/London";
+    }
 }
 
 $_INFO = json_decode(xor_parse(base64_decode(file_get_contents(MAIN_DIR . "config")), CONFIG_CRYPT_KEY), True);
-$db = new mysqli($_INFO["host"], $_INFO["db_user"], $_INFO["db_pass"], $_INFO["db_name"], $_INFO["db_port"]);
+if (!$db = new mysqli($_INFO["host"], $_INFO["db_user"], $_INFO["db_pass"], $_INFO["db_name"], $_INFO["db_port"])) { exit("No MySQL connection!"); } 
 $db->set_charset("utf8");
 date_default_timezone_set(getTimezone());
 
@@ -304,10 +308,10 @@ function getMemberGroups() {
 function getRegisteredUsernames() {
     global $db;
     $return = Array();
-    $result = $db->query("SELECT `username` FROM `reg_users` ORDER BY `id` ASC;");
+    $result = $db->query("SELECT `id`, `username` FROM `reg_users` ORDER BY `id` ASC;");
     if (($result) && ($result->num_rows > 0)) {
         while ($row = $result->fetch_assoc()) {
-            $return[intval($row["id"])] = $row;
+            $return[intval($row["id"])] = $row["username"];
         }
     }
     return $return;

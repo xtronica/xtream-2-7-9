@@ -8,7 +8,7 @@ if (isset($_POST["submit_bouquet"])) {
         $rBouquetData = json_decode($_POST["bouquet_data"], True);
         $rArray["bouquet_channels"] = array_values($rBouquetData["stream"]);
         $rArray["bouquet_series"] = array_values($rBouquetData["series"]);
-    } else {
+    } else if (isset($_POST["edit"])) {
         echo "Bouquet data not transfered!"; exit;
     }
     foreach($_POST as $rKey => $rValue) {
@@ -410,7 +410,6 @@ include "header.php"; ?>
             } else {
                 rBouquet[rType].push(String(rID));
             }
-            $("#bouquet_data").val(JSON.stringify(rBouquet));
             if (rType == "stream") {
                 $("#datatable-streams").DataTable().ajax.reload(null, false);
                 $("#datatable-vod").DataTable().ajax.reload(null, false);
@@ -423,7 +422,6 @@ include "header.php"; ?>
         }
         
         $(document).ready(function() {
-            $("#bouquet_data").val(JSON.stringify(rBouquet));
             $("#datatable-streams").DataTable({
                 language: {
                     paginate: {
@@ -588,6 +586,7 @@ include "header.php"; ?>
                     e.preventDefault();
                     $.toast("Enter a bouquet name.");
                 }
+                $("#bouquet_data").val(JSON.stringify(rBouquet));
             });
             $("form").attr('autocomplete', 'off');
         });

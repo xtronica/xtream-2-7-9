@@ -31,13 +31,14 @@ if ($_GET["id"] == "users") {
     $columns = array(
         array('db' => 'id', 'dt' => 0),
         array('db' => 'username', 'dt' => 1),
-        array('db' => 'member_id', 'dt' => 2,
+        array('db' => 'password', 'dt' => 2),
+        array('db' => 'member_id', 'dt' => 3,
             'formatter' => function( $d, $row ) {
                 global $rRegisteredUsers;
-                return $rRegisteredUsers[intval($d)]["username"];
+                return $rRegisteredUsers[intval($d)];
             }
         ),
-        array('db' => 'admin_enabled', 'dt' => 3,
+        array('db' => 'admin_enabled', 'dt' => 4,
             'formatter' => function( $d, $row ) {
                 if ($d == 0) {
                     return "BANNED";
@@ -52,18 +53,18 @@ if ($_GET["id"] == "users") {
                 }
             }
         ),
-        array('db' => 'id', 'dt' => 4,
+        array('db' => 'id', 'dt' => 5,
             'formatter' => function( $d, $row ) {
                 global $rActivity;
-                return Array(0 => "OFFLINE", 1 => "ONLINE")[(int)(isset($rActivity[intval($d)]) === 'true')];
+                return Array(false => "OFFLINE", true => "ONLINE")[isset($rActivity[intval($d)])];
             }
         ),
-        array('db' => 'exp_date', 'dt' => 5,
+        array('db' => 'exp_date', 'dt' => 6,
             'formatter' => function( $d, $row ) {
                 if ($d) { return date("Y-m-d", $d); } else { return "Unlimited"; }
             }
         ),
-        array('db' => 'max_connections', 'dt' => 6,
+        array('db' => 'max_connections', 'dt' => 7,
             'formatter' => function( $d, $row ) {
                 global $rActivity;
                 if (isset($rActivity[intval($row["id"])])) {
@@ -75,7 +76,7 @@ if ($_GET["id"] == "users") {
                 return $val." / ".$d;
             }
         ),
-        array('db' => 'max_connections', 'dt' => 7,
+        array('db' => 'max_connections', 'dt' => 8,
             'formatter' => function( $d, $row ) {
                 global $rLastActivity;
                 if (isset($rLastActivity[intval($row["id"])])) {
@@ -85,9 +86,10 @@ if ($_GET["id"] == "users") {
                 }
             }
         ),
-        array('db' => 'id', 'dt' => 8,
+        array('db' => 'id', 'dt' => 9,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
+                $rButtons = '<button type="button" class="btn btn-outline-secondary waves-effect waves-light btn-xs" onClick="download(\''.$row["username"].'\', \''.$row["password"].'\');""><i class="mdi mdi-download"></i></button>';
+                $rButtons .= '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
                 if ($row["admin_enabled"] == 1) {
                     $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'ban\');""><i class="mdi mdi-power"></i></button>';
                 } else {

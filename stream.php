@@ -7,7 +7,7 @@ if (isset($_POST["submit_stream"])) {
         $rArray = getStream($_POST["edit"]);
         unset($rArray["id"]);
     } else {
-        $rArray = Array("type" => 1, "added" => time(), "read_native" => 0, "stream_all" => 0, "redirect_stream" => 0, "direct_source" => 0, "gen_timestamps" => 0, "transcode_attributes" => Array(), "stream_display_name" => "", "stream_source" => Array(), "category_id" => 0, "stream_icon" => "", "notes" => "", "custom_sid" => "", "custom_ffmpeg" => "", "transcode_profile_id" => 0, "enable_transcode" => 0, "auto_restart" => "", "allow_record" => 1, "rtmp_output" => 0, "epg_id" => 0, "channel_id" => "", "epg_lang" => "", "tv_archive_server_id" => 0, "tv_archive_duration" => 0, "delay_minutes" => 0, "external_push" => Array());
+        $rArray = Array("type" => 1, "added" => time(), "read_native" => 0, "stream_all" => 0, "direct_source" => 0, "gen_timestamps" => 0, "transcode_attributes" => Array(), "stream_display_name" => "", "stream_source" => Array(), "category_id" => 0, "stream_icon" => "", "notes" => "", "custom_sid" => "", "custom_ffmpeg" => "", "transcode_profile_id" => 0, "enable_transcode" => 0, "auto_restart" => "[]", "allow_record" => 1, "rtmp_output" => 0, "epg_id" => 0, "channel_id" => "", "epg_lang" => "", "tv_archive_server_id" => 0, "tv_archive_duration" => 0, "delay_minutes" => 0, "external_push" => Array());
     }
     $rArray["stream_source"] = Array();
     if (isset($_POST["stream_source"])) {
@@ -80,6 +80,12 @@ if (isset($_POST["submit_stream"])) {
         unset($_POST["delay_minutes"]);
     } else {
         $rArray["delay_minutes"] = 0;
+    }
+    if (isset($_POST["channel_id"])) {
+        $rArray["channel_id"] = $_POST["channel_id"];
+        unset($_POST["channel_id"]);
+    } else {
+        $rArray["channel_id"] = "";
     }
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
@@ -203,7 +209,7 @@ include "header.php"; ?>
                                     <a href="./streams.php<?php if (isset($_GET["category"])) { echo "?category=".$_GET["category"]; } ?>"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Streams</li></a>
                                 </ol>
                             </div>
-                            <h4 class="page-title"><?php if (isset($rStream)) { echo "Edit"; } else { echo "Add"; } ?> Stream</h4>
+                            <h4 class="page-title"><?php if (isset($rStream)) { echo $rStream["stream_display_name"]; } else { echo "Add Stream"; } ?></h4>
                         </div>
                     </div>
                 </div>     
