@@ -5,8 +5,8 @@ session_start();
 set_time_limit(10);
 ini_set('default_socket_timeout', 10);
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 define("MAIN_DIR", "/home/xtreamcodes/iptv_xtream_codes/");
