@@ -81,15 +81,14 @@ if (isset($_POST["submit_stream"])) {
     } else {
         $rArray["delay_minutes"] = 0;
     }
-    if(empty($_POST['epg_lang'])) {
-        $rArray["epg_lang"] = null;
-    }
     if (isset($_POST["probesize_ondemand"])) {
         $rArray["probesize_ondemand"] = intval($_POST["probesize_ondemand"]);
         unset($_POST["probesize_ondemand"]);
     } else {
         $rArray["probesize_ondemand"] = 0;
-
+    }
+    if(empty($_POST['epg_lang'])) {
+        $rArray["epg_lang"] = null;
     }
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
