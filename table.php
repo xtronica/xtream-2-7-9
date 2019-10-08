@@ -44,11 +44,11 @@ if ($_GET["id"] == "users") {
                     return "BANNED";
                 } else {
                     if ($row["enabled"] == 0) {
-                        return "DISABLED";
+                        return '<i class="text-danger fas fa-circle">';
                     } else if (($row["exp_date"]) && ($row["exp_date"] < time())) {
-                        return "EXPIRED";
+                        return '<i class="text-warning far fa-circle">';
                     } else {
-                        return "ACTIVE";
+                        return '<i class="text-success fas fa-circle">';
                     }
                 }
             }
@@ -56,7 +56,11 @@ if ($_GET["id"] == "users") {
         array('db' => 'id', 'dt' => 5,
             'formatter' => function( $d, $row ) {
                 global $rActivity;
-                return Array(false => "OFFLINE", true => "ONLINE")[isset($rActivity[intval($d)])];
+                if (isset($rActivity[intval($d)])) {
+                    return '<i class="text-success fas fa-circle">';
+                } else {
+                    return '<i class="text-warning far fa-circle">';
+                }
             }
         ),
         array('db' => 'exp_date', 'dt' => 6,
@@ -128,12 +132,20 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'status', 'dt' => 5,
             'formatter' => function( $d, $row ) {
-                return Array(0 => "DISABLED", 1 => "ENABLED")[$d];
+                if ($d == 1) {
+                    return '<i class="text-success fas fa-circle">';
+                } else {
+                    return '<i class="text-warning far fa-circle">';
+                }
             }
         ),
         array('db' => 'verified', 'dt' => 6,
             'formatter' => function( $d, $row ) {
-                return Array(0 => "UNVERIFIED", 1 => "VERIFIED")[$d];
+                if ($d == 1) {
+                    return '<i class="text-success fas fa-circle">';
+                } else {
+                    return '<i class="text-warning far fa-circle">';
+                }
             }
         ),
         array('db' => 'last_login', 'dt' => 7,

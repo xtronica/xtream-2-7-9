@@ -40,7 +40,7 @@
 
                         <li class="dropdown notification-list">
                             <!-- Mobile menu toggle-->
-                            <a class="navbar-toggle nav-link">
+                            <a class="navbar-toggle nav-link text-white">
                                 <div class="lines">
                                     <span></span>
                                     <span></span>
@@ -51,18 +51,18 @@
                         </li>
                         <?php if ($rServerError) { ?>
                         <li class="notification-list">
-                            <a href="./servers.php" class="nav-link right-bar-toggle waves-effect text-danger">
+                            <a href="./servers.php" class="nav-link right-bar-toggle waves-effect text-warning">
                                 <i class="mdi mdi-wifi-strength-off noti-icon"></i>
                             </a>
                         </li>
                         <?php } ?>
                         <li class="notification-list">
-                            <a href="./settings.php" class="nav-link right-bar-toggle waves-effect">
+                            <a href="./settings.php" class="nav-link right-bar-toggle waves-effect text-white">
                                 <i class="fe-settings noti-icon"></i>
                             </a>
                         </li>
                         <li class="notification-list">
-                            <a href="./logout.php" class="nav-link right-bar-toggle waves-effect">
+                            <a href="./logout.php" class="nav-link right-bar-toggle waves-effect text-white">
                                 <i class="fe-power noti-icon"></i>
                             </a>
                         </li>
@@ -72,12 +72,10 @@
                     <div class="logo-box">
                         <a href="dashboard.php" class="logo text-center">
                             <span class="logo-lg">
-                                <img src="assets/images/logo-back.png" alt="" height="26">
-                                <!-- <span class="logo-lg-text-dark">Upvex</span> -->
+                                <img src="assets/images/logo.png" alt="" height="26">
                             </span>
                             <span class="logo-sm">
-                                <!-- <span class="logo-sm-text-dark">X</span> -->
-                                <img src="assets/images/logo-back.png" alt="" height="28">
+                                <img src="assets/images/logo.png" alt="" height="28">
                             </span>
                         </a>
                     </div>

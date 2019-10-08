@@ -87,13 +87,25 @@ if (isset($_POST["submit_stream"])) {
     } else {
         $rArray["probesize_ondemand"] = 0;
     }
+    if (empty($_POST["epg_lang"])) {
+        $rArray["epg_lang"] = "NULL";
+        unset($_POST["epg_lang"]);
+    }
+    if (isset($_POST["epg_id"])) {
+        $rArray["epg_id"] = $_POST["epg_id"];
+        unset($_POST["epg_id"]);
+    }
+    if (isset($_POST["epg_name"])) {
+        $rArray["epg_name"] = $_POST["epg_name"];
+        unset($_POST["epg_name"]);
+    }
+    if ($rArray["transcode_profile_id"] > 0) {
+        $rArray["enable_transcode"] = 1;
+    }
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
             $rArray[$rKey] = $rValue;
         }
-    }
-    if ($rArray["transcode_profile_id"] > 0) {
-        $rArray["enable_transcode"] = 1;
     }
     $rCols = "`".implode('`,`', array_keys($rArray))."`";
     foreach (array_values($rArray) as $rValue) {

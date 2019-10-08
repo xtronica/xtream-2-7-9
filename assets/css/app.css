@@ -438,7 +438,9 @@ body{
     padding-left:12px
 }
 .navbar-custom{
-    background-color:#fff;
+    background-size:cover;
+    background-position:center;
+    background-image:url(../images/bg.png);
     padding:0 10px 0 0;
     position:fixed;
     left:0;
