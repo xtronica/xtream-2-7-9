@@ -100,6 +100,12 @@ include "header.php"; ?>
                                                     <span class="d-none d-sm-inline">Video</span>
                                                 </a>
                                             </li>
+                                            <li class="nav-item">
+                                                <a href="#database" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
+                                                    <i class="mdi mdi-database-edit mr-1"></i>
+                                                    <span class="d-none d-sm-inline">Database</span>
+                                                </a>
+                                            </li>
                                             <!-- <li class="nav-item">
                                                 <a href="#mail" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
                                                     <i class="mdi mdi-email mr-1"></i>
@@ -243,6 +249,16 @@ include "header.php"; ?>
                                                                 <input type="text" class="form-control" id="expired_video_path" name="expired_video_path" value="<?=$rSettings["expired_video_path"]?>">
                                                             </div>
                                                         </div>
+                                                    </div> <!-- end col -->
+                                                </div> <!-- end row -->
+                                            </div>
+                                            <div class="tab-pane" id="database">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <p class="sub-header">
+                                                            We have integrated a freeware PHP based MySQL editor into the system to allow you to manage your database manually. You can access it below.
+                                                        </p>
+                                                        <a href="./database.php"><button type="button" class="btn btn-info waves-effect waves-light btn-xl"><i class="mdi mdi-database-edit-btc"></i> Database Editor</button></a>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                             </div>
