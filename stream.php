@@ -81,6 +81,9 @@ if (isset($_POST["submit_stream"])) {
     } else {
         $rArray["delay_minutes"] = 0;
     }
+    if( empty($_POST['epg_lang']) ){
+        $rArray["epg_lang"] = null;
+    }
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
             $rArray[$rKey] = $rValue;
