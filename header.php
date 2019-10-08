@@ -85,7 +85,7 @@
                 </div>
             </div>
             <!-- end Topbar -->
-        
+
             <div class="topbar-menu">
                 <div class="container-fluid">
                     <div id="navigation">
@@ -135,7 +135,7 @@
                                     <li><a href="#">User Activity <i class="la la-exclamation-triangle"></i></a></li>
                                 </ul>
                             </li>
-                            
+
                             <li class="has-submenu">
                                 <a href="#"> <i class="la la-tablet"></i>Devices <div class="arrow-down"></div></a>
                                 <ul class="submenu">
@@ -147,9 +147,9 @@
                                     <li><a href="./enigmas.php">Manage Enigma Devices</a></li>
                                 </ul>
                             </li>
-                            
+
                             <!-- Reseller coming in later release -->
-                            
+
                             <!-- <li class="has-submenu">
                                 <a href="#"> <i class="la la-briefcase"></i>Packages <div class="arrow-down"></div></a>
                                 <ul class="submenu">
@@ -157,7 +157,7 @@
                                     <li><a href="#">Manage Packages <i class="la la-exclamation-triangle"></i></a></li>
                                 </ul>
                             </li> -->
-                            
+
                             <li class="has-submenu">
                                 <a href="#"> <i class="la la-video-camera"></i>VOD <div class="arrow-down"></div></a>
                                 <ul class="submenu">
@@ -174,7 +174,7 @@
                                     <li><a href="#">Manage TV Episodes <i class="la la-exclamation-triangle"></i></a></li>
                                 </ul>
                             </li>
-                            
+
                             <li class="has-submenu">
                                 <a href="#"> <i class="la la-tasks"></i>Bouquets <div class="arrow-down"></div></a>
                                 <ul class="submenu">
@@ -182,7 +182,7 @@
                                     <li><a href="./bouquets.php">Manage Bouquets</a></li>
                                 </ul>
                             </li>
-                            
+
                             <li class="has-submenu">
                                 <a href="#"> <i class="mdi mdi-television-guide"></i>EPG <div class="arrow-down"></div></a>
                                 <ul class="submenu">
@@ -199,6 +199,7 @@
                                     <li><a href="#" data-toggle="modal" data-target="#streamCategories">Manage Streams</a></li>
                                     <?php } ?>
                                     <li><a href="./streams.php">Manage All Streams</a></li>
+                                    <li><a href="./import.php">Import Streams</a></li>
                                     <li class="separator"></li>
                                     <li><a href="./stream_category.php">Add Stream Category</a></li>
                                     <li><a href="./stream_categories.php">Manage Stream Categories</a></li>
