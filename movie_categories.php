@@ -24,7 +24,7 @@ if (isset($_POST["categories"])) {
                 $db->query("UPDATE `streams` SET `category_id` = 0 WHERE `category_id` = ".intval($rCategoryID).";");
             }
         }
-        $rCategories = getCategories("movie");
+        $rCategories = getCategories("movie"); // Update
     }
 }
 
