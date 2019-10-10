@@ -40,8 +40,8 @@ if (isset($_POST["submit_category"])) {
     }
 }
 
+$rCategories = getCategories("movie");
 if (isset($_GET["id"])) {
-    $rCategories = getCategories("movie");
     $rCategoryArr = $rCategories[$_GET["id"]];
     if (!$rCategoryArr) {
         exit;
