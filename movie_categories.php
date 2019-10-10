@@ -24,7 +24,7 @@ if (isset($_POST["categories"])) {
                 $db->query("UPDATE `streams` SET `category_id` = 0 WHERE `category_id` = ".intval($rCategoryID).";");
             }
         }
-        $rCategories = getCategories(); // Update
+        $rCategories = getCategories("movie");
     }
 }
 
@@ -64,7 +64,7 @@ include "header.php"; ?>
                     <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
-                                <form action="./stream_categories.php" method="POST" id="stream_categories_form">
+                                <form action="./movie_categories.php" method="POST" id="movie_categories_form">
                                     <input type="hidden" id="categories_input" name="categories" value="" />
                                     <div id="basicwizard">
                                         <ul class="nav nav-pills bg-light nav-justified form-wizard-header mb-4">
@@ -185,7 +185,7 @@ include "header.php"; ?>
         }
         $(document).ready(function() {
             $("#category_order").nestable({maxDepth: 2});
-            $("#stream_categories_form").submit(function(e){
+            $("#movie_categories_form").submit(function(e){
                 $("#categories_input").val(JSON.stringify($('.dd').nestable('serialize')));
             });
             
