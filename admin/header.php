@@ -113,6 +113,7 @@
                                 <a href="#"><i class="la la-server"></i>Servers <div class="arrow-down"></div></a>
                                 <ul class="submenu">
                                     <li><a href="./server.php">Add Server</a></li>
+                                    <li><a href="./install_server.php">Install Load Balancer</a></li>
                                     <li><a href="./servers.php">Manage Servers</a></li>
                                     <li class="separator"></li>
                                     <li><a href="#">Live Connections <i class="la la-exclamation-triangle"></i></a></li>

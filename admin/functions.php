@@ -475,7 +475,11 @@ if (isset($_SESSION['user_id'])) {
     $rServers = getStreamingServers();
     $rServerError = False;
     foreach ($rServers as $rServer) {
-        if ((((($rServer["last_check_ago"] > 0) && ((time() - $rServer["last_check_ago"]) > 360)) OR ($rServer["status"] == 2))) && ($rServer["server_id"] <> $_INFO["server_id"])) { $rServerError = True; }
+        if (((((time() - $rServer["last_check_ago"]) > 360)) OR ($rServer["status"] == 2)) AND ($rServer["can_delete"] == 1) AND ($rServer["status"] <> 3)) { $rServerError = True; }
+        if (($rServer["status"] == 3) && ($rServer["last_check_ago"] > 0)) {
+            $db->query("UPDATE `streaming_servers` SET `status` = 1 WHERE `id` = ".intval($rServer["id"]).";");
+            $rServers[intval($rServer["id"])]["status"] = 1;
+        }
     }
 }
 ?>
