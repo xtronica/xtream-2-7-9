@@ -90,23 +90,8 @@
                         <!-- Navigation Menu-->
                         <ul class="navigation-menu">
 
-                            <li class="has-submenu">
-                                <a href="#"><i class="la la-dashboard"></i>Dashboard <div class="arrow-down"></div></a>
-                                <ul class="submenu megamenu">
-                                    <li>
-                                        <ul>
-                                            <li><a href="./dashboard.php">Server Overview</a></li>
-                                            <?php $i = 0; foreach ($rServers as $rServer) { $i ++; ?>
-                                            <li><a href="./dashboard.php?server_id=<?=$rServer["id"]?>"><?=$rServer["server_name"]?></a></li>
-                                            <?php if ($i == 12) {
-                                                    echo "</ul></li><li><ul>";
-                                                    $i = 0;
-                                                }
-                                            }
-                                            ?>
-                                        </ul>
-                                    </li>
-                                </ul>
+                            <li>
+                                <a href="./dashboard.php"><i class="la la-dashboard"></i>Dashboard</a>
                             </li>
 
                             <li class="has-submenu">

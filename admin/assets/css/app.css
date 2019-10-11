@@ -3758,3 +3758,17 @@ body.authentication-bg-pattern{
 .user-online {
     background: #C8E6C911;
 }
+.dashboard-tabs {
+    margin-top:25px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+}
+.dashboard-tabs::-webkit-scrollbar {
+    height: 2px;
+	background-color: #F5F5F5;
+}
+.dashboard-tabs::-webkit-scrollbar-thumb {
+    display:none;
+}
