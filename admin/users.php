@@ -240,7 +240,7 @@ include "header.php";
         
         $("#download_type").change(function() {
             if ($("#download_type").val().length > 0) {
-                $("#download_url").val("http://<?=$rServers[$_INFO["server_id"]]["server_ip"]?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val()));
+				$("#download_url").val("http://<?=($rServers[$_INFO["server_id"]]["domain_name"] ? $rServers[$_INFO["server_id"]]["domain_name"] : $rServers[$_INFO["server_id"]]["server_ip"])?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val()));
             } else {
                 $("#download_url").val("");
             }
