@@ -77,7 +77,7 @@ if ($_GET["id"] == "users") {
                     $val = 0;
                 }
                 if ($d == 0) { $d = "&infin;"; }
-                return "<a href=\"./user_activity.php?user_id=".$row["id"]."\">".$val." / ".$d."</a>";
+                return "<a href=\"./live_connections.php?user_id=".$row["id"]."\">".$val." / ".$d."</a>";
             }
         ),
         array('db' => 'max_connections', 'dt' => 8,
@@ -360,7 +360,7 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 4,
             'formatter' => function( $d, $row, $server ) {
-                return "<a href=\"./user_activity.php?stream_id=".$row["id"]."\">".$server["active_count"]."</a>";
+                return "<a href=\"./live_connections.php?stream_id=".$row["id"]."\">".$server["active_count"]."</a>";
             }
         ),
         array('db' => 'id', 'dt' => 5,
