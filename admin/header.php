@@ -23,6 +23,7 @@
         <link href="assets/libs/clockpicker/bootstrap-clockpicker.min.css" rel="stylesheet" type="text/css" />
         <link href="assets/libs/daterangepicker/daterangepicker.css" rel="stylesheet" type="text/css" />
         <link href="assets/libs/nestable2/jquery.nestable.min.css" rel="stylesheet" />
+        <link href="assets/libs/magnific-popup/magnific-popup.css" rel="stylesheet" type="text/css" />
         <!-- third party css end -->
 
         <!-- App css -->

@@ -18,6 +18,14 @@ if (isset($_POST["submit_settings"])) {
     } else {
         $rAdminSettings["auto_update"] = false;
     }
+    if (isset($_POST["admin_username"])) {
+        $rAdminSettings["admin_username"] = $_POST["admin_username"];
+        unset($_POST["admin_username"]);
+    }
+    if (isset($_POST["admin_password"])) {
+        $rAdminSettings["admin_password"] = $_POST["admin_password"];
+        unset($_POST["admin_password"]);
+    }
     writeAdminSettings();
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
@@ -151,6 +159,15 @@ include "header.php"; ?>
                                                             <label class="col-md-4 col-form-label" for="live_streaming_pass">Live Streaming Pass</label>
                                                             <div class="col-md-8">
                                                                 <input type="text" class="form-control" id="live_streaming_pass" name="live_streaming_pass" value="<?=$rSettings["live_streaming_pass"]?>">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="admin_username">Player Credentials <i data-toggle="tooltip" data-placement="top" title="" data-original-title="To play live streams in the Admin Interface, create a line with HLS output enabled and access to all bouquets. Enter the credentials here." class="mdi mdi-information"></i></label>
+                                                            <div class="col-md-4">
+                                                                <input type="text" placeholder="Line Username" class="form-control" id="admin_username" name="admin_username" value="<?=$rAdminSettings["admin_username"]?>">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <input type="text" placeholder="Line Password" class="form-control" id="admin_password" name="admin_password" value="<?=$rAdminSettings["admin_password"]?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">

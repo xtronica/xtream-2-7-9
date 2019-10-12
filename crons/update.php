@@ -11,7 +11,11 @@ if (($rSettings) && ($rSettings["auto_update"])) {
             // New version available!
             exec($rUpdate["update_script"]);
             // Set changes to settings here then save.
-            $rUpdate["auto_update_check"] = $rSettings["auto_update_check"];
+            foreach (Array("auto_update", "auto_update_check", "auto_update_periodicity", "admin_username", "admin_password") as $rItem) {
+                if (isset($rSettings[$rItem])) {
+                    $rUpdate[$rItem] = $rSettings[$rItem];
+                }
+            }
             file_put_contents($rPath, json_encode($rUpdate));
         } else {
             file_put_contents($rPath, json_encode($rSettings));

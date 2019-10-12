@@ -387,6 +387,15 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 7,
             'formatter' => function( $d, $row, $server ) {
+                if ((intval($server["actual_status"]) == 1) OR ($server["on_demand"] == 1) OR ($server["actual_status"] == 5)) {
+                    return '<button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs" onClick="player('.$d.');"><i class="mdi mdi-play"></i></button>';
+                } else {
+                    return '<button type="button" disabled class="btn btn-outline-secondary waves-effect waves-light btn-xs"><i class="mdi mdi-play"></i></button>';
+                }
+            }
+        ),
+        array('db' => 'id', 'dt' => 8,
+            'formatter' => function( $d, $row, $server ) {
                 return $server["stream_text"];
             }
         )
