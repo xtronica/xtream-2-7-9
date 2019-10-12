@@ -171,7 +171,7 @@ include "header.php";
         <footer class="footer">
             <div class="container-fluid">
                 <div class="row">
-                    <div class="col-md-12  text-center">Xtream Codes - Admin UI</div>
+                    <div class="col-md-12 copyright text-center"><?=getFooter()?></div>
                 </div>
             </div>
         </footer>
@@ -207,6 +207,10 @@ include "header.php";
                 if (confirm('Are you sure you want to delete this user?') == false) {
                     return;
                 }
+            } else if (rType == "kill") {
+                if (confirm('Are you sure you want to kill all connections for this user?') == false) {
+                    return;
+                }
             }
             $.getJSON("./api.php?action=user&sub=" + rType + "&user_id=" + rID, function(data) {
                 if (data.result === true) {
@@ -220,6 +224,8 @@ include "header.php";
                         $.toast("User has been unbanned.");
                     } else if (rType == "ban") {
                         $.toast("User has been banned.");
+                    } else if (rType == "kill") {
+                        $.toast("All connections for this user have been killed.");
                     }
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
@@ -240,7 +246,7 @@ include "header.php";
         
         $("#download_type").change(function() {
             if ($("#download_type").val().length > 0) {
-				$("#download_url").val("http://<?=($rServers[$_INFO["server_id"]]["domain_name"] ? $rServers[$_INFO["server_id"]]["domain_name"] : $rServers[$_INFO["server_id"]]["server_ip"])?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val()));
+                $("#download_url").val("http://<?=($rServers[$_INFO["server_id"]]["domain_name"] ? $rServers[$_INFO["server_id"]]["domain_name"] : $rServers[$_INFO["server_id"]]["server_ip"])?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val()));
             } else {
                 $("#download_url").val("");
             }

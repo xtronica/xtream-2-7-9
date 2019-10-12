@@ -40,8 +40,8 @@
 
                         <li class="dropdown notification-list">
                             <!-- Mobile menu toggle-->
-                            <a class="navbar-toggle nav-link text-white">
-                                <div class="lines">
+                            <a class="navbar-toggle nav-link">
+                                <div class="lines text-white">
                                     <span></span>
                                     <span></span>
                                     <span></span>
@@ -101,7 +101,7 @@
                                     <li><a href="./install_server.php">Install Load Balancer</a></li>
                                     <li><a href="./servers.php">Manage Servers</a></li>
                                     <li class="separator"></li>
-                                    <li><a href="#">Live Connections <i class="la la-exclamation-triangle"></i></a></li>
+                                    <li><a href="./live_connections.php">Live Connections</a></li>
                                 </ul>
                             </li>
 
@@ -116,18 +116,19 @@
                                     <li><a href="#">Manage Group Members <i class="la la-exclamation-triangle"></i></a></li>
                                     <li class="separator"></li>
                                     <li><a href="#">Client Logs <i class="la la-exclamation-triangle"></i></a></li>
-                                    <li><a href="#">User Activity <i class="la la-exclamation-triangle"></i></a></li>
                                 </ul>
                             </li>
                             
                             <li class="has-submenu">
                                 <a href="#"> <i class="la la-tablet"></i>Devices <div class="arrow-down"></div></a>
                                 <ul class="submenu">
-                                    <li><a href="./mag.php">Add MAG Device</a></li>
+                                    <li><a href="./user.php?mag">Add MAG User</a></li>
+                                    <li><a href="./mag.php">Link MAG User</a></li>
                                     <li><a href="./mags.php">Manage MAG Devices</a></li>
                                     <li><a href="./mag_events.php">Manage MAG Events</a></li>
                                     <li class="separator"></li>
-                                    <li><a href="./enigma.php">Add Enigma Device</a></li>
+                                    <li><a href="./user.php?e2">Add Enigma User</a></li>
+                                    <li><a href="./enigma.php">Link MAG User</a></li>
                                     <li><a href="./enigmas.php">Manage Enigma Devices</a></li>
                                 </ul>
                             </li>
@@ -179,6 +180,7 @@
                                 <a href="#"> <i class="la la-play-circle-o"></i>Streams <div class="arrow-down"></div></a>
                                 <ul class="submenu">
                                     <li><a href="./stream.php">Add Stream</a></li>
+                                    <li><a href="./stream.php?import">Import Streams</a></li>
                                     <?php if (count($rCategories) > 0) { ?>
                                     <li><a href="#" data-toggle="modal" data-target="#streamCategories">Manage Streams</a></li>
                                     <?php } ?>

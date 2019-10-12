@@ -16,6 +16,18 @@ include "./mobiledetect.php";
 $detect = new Mobile_Detect;
 
 $rStatusArray = Array(0 => "Stopped", 1 => "Running", 2 => "Starting", 3 => "<strong style='color:#cc9999'>DOWN</strong>", 4 => "On Demand", 5 => "Direct");
+$rSettings = json_decode(file_get_contents("/home/xtreamcodes/iptv_xtream_codes/adtools/settings.json"), True);
+
+function generateString($strength = 10) {
+    $input = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $input_length = strlen($input);
+    $random_string = '';
+    for($i = 0; $i < $strength; $i++) {
+        $random_character = $input[mt_rand(0, $input_length - 1)];
+        $random_string .= $random_character;
+    }
+    return $random_string;
+}
 
 function xor_parse($data, $key) {
     $i = 0;
@@ -41,15 +53,6 @@ if (!$db = new mysqli($_INFO["host"], $_INFO["db_user"], $_INFO["db_pass"], $_IN
 $db->set_charset("utf8");
 date_default_timezone_set(getTimezone());
 
-function checkUpdate() {
-    global $rRelease;
-    if (intval(json_decode(file_get_contents("http://xtreamcodes.org/update/update.php"), True)["release"]) > $rRelease) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 function getStreamingServers() {
     global $db;
     $return = Array();
@@ -60,6 +63,15 @@ function getStreamingServers() {
         }
     }
     return $return;
+}
+
+function getStreamingServersByID($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `streaming_servers` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return False;
 }
 
 function getSettings() {
@@ -195,6 +207,26 @@ function getEPGSources() {
         }
     }
     return $return;
+}
+
+function findEPG($rEPGName) {
+    global $db;
+    $result = $db->query("SELECT `id`, `data` FROM `epg`;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            foreach (json_decode($row["data"], True) as $rChannelID => $rChannelData) {
+                if ($rChannelID == $rEPGName) {
+                    if (count($rChannelData["langs"]) > 0) {
+                        $rEPGLang = $rChannelData["langs"][0];
+                    } else {
+                        $rEPGLang = "";
+                    }
+                    return Array("channel_id" => $rChannelID, "epg_lang" => $rEPGLang, "epg_id" => intval($row["id"]));
+                }
+            }
+        }
+    }
+    return null;
 }
 
 function getStreamArguments() {
@@ -385,6 +417,15 @@ function getChannels($rType="live") {
     return $return;
 }
 
+function getChannelsByID($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `streams` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return False;
+}
+
 function getMag($rID) {
     global $db;
     $result = $db->query("SELECT * FROM `mag_devices` WHERE `mag_id` = ".intval($rID).";");
@@ -415,6 +456,24 @@ function getEnigma($rID) {
         return $row;
     }
     return Array();
+}
+
+function getMAGUser($rID) {
+    global $db;
+    $result = $db->query("SELECT `mac` FROM `mag_devices` WHERE `user_id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return base64_decode($result->fetch_assoc()["mac"]);
+    }
+    return "";
+}
+
+function getE2User($rID) {
+    global $db;
+    $result = $db->query("SELECT `mac` FROM `enigma_devices` WHERE `user_id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc()["mac"];
+    }
+    return "";
 }
 
 function cryptPassword($password, $salt="xtreamcodes", $rounds=20000) {
@@ -468,6 +527,12 @@ function secondsToTime($inputSeconds) {
         's' => (int) $seconds,
     );
     return $obj;
+}
+
+function getFooter() {
+    // Don't be a dick. Leave it.
+    global $rSettings;
+    return "Copyright &copy; 2019 - <a href=\"https://xtream-ui.com\">Xtream UI</a> R".$rSettings["version"]." - Free & Open Source Forever";
 }
 
 if (isset($_SESSION['user_id'])) {

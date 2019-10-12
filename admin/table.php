@@ -44,11 +44,11 @@ if ($_GET["id"] == "users") {
                     return "BANNED";
                 } else {
                     if ($row["enabled"] == 0) {
-                        return '<i class="text-danger fas fa-circle">';
+                        return '<i class="text-danger fas fa-circle"></i>';
                     } else if (($row["exp_date"]) && ($row["exp_date"] < time())) {
-                        return '<i class="text-warning far fa-circle">';
+                        return '<i class="text-warning far fa-circle"></i>';
                     } else {
-                        return '<i class="text-success fas fa-circle">';
+                        return '<i class="text-success fas fa-circle"></i>';
                     }
                 }
             }
@@ -57,9 +57,9 @@ if ($_GET["id"] == "users") {
             'formatter' => function( $d, $row ) {
                 global $rActivity;
                 if (isset($rActivity[intval($d)])) {
-                    return '<i class="text-success fas fa-circle">';
+                    return '<i class="text-success fas fa-circle"></i>';
                 } else {
-                    return '<i class="text-warning far fa-circle">';
+                    return '<i class="text-warning far fa-circle"></i>';
                 }
             }
         ),
@@ -77,7 +77,7 @@ if ($_GET["id"] == "users") {
                     $val = 0;
                 }
                 if ($d == 0) { $d = "&infin;"; }
-                return $val." / ".$d;
+                return "<a href=\"./user_activity.php?user_id=".$row["id"]."\">".$val." / ".$d."</a>";
             }
         ),
         array('db' => 'max_connections', 'dt' => 8,
@@ -92,10 +92,12 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 9,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<button type="button" class="btn btn-outline-secondary waves-effect waves-light btn-xs" onClick="download(\''.$row["username"].'\', \''.$row["password"].'\');""><i class="mdi mdi-download"></i></button>';
-                $rButtons .= '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
+                $rButtons = '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
+                $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="download(\''.$row["username"].'\', \''.$row["password"].'\');""><i class="mdi mdi-download"></i></button>';
+                $rButtons .= '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$d.', \'kill\');""><i class="fas fa-hammer"></i></button>';
                 if ($row["admin_enabled"] == 1) {
-                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'ban\');""><i class="mdi mdi-power"></i></button>';
+                    // Overkill, remove for now, leave unban button just incase.
+                    //$rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'ban\');""><i class="mdi mdi-power"></i></button>';
                 } else {
                     $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'unban\');""><i class="mdi mdi-power"></i></button>';
                 }
@@ -133,18 +135,18 @@ if ($_GET["id"] == "users") {
         array('db' => 'status', 'dt' => 5,
             'formatter' => function( $d, $row ) {
                 if ($d == 1) {
-                    return '<i class="text-success fas fa-circle">';
+                    return '<i class="text-success fas fa-circle"></i>';
                 } else {
-                    return '<i class="text-warning far fa-circle">';
+                    return '<i class="text-warning far fa-circle"></i>';
                 }
             }
         ),
         array('db' => 'verified', 'dt' => 6,
             'formatter' => function( $d, $row ) {
                 if ($d == 1) {
-                    return '<i class="text-success fas fa-circle">';
+                    return '<i class="text-success fas fa-circle"></i>';
                 } else {
-                    return '<i class="text-warning far fa-circle">';
+                    return '<i class="text-warning far fa-circle"></i>';
                 }
             }
         ),
@@ -170,6 +172,82 @@ if ($_GET["id"] == "users") {
             }
         )
     );
+} else if ($_GET["id"] == "live_connections") {
+    $rRegisteredUsers = getRegisteredUsernames();
+    $rChannels = getChannels();
+    $rStreamingServers = getStreamingServers();
+    $rActivity = Array();
+    $result = $db->query("SELECT `user_id`, COUNT(`activity_id`) AS `count` FROM `user_activity_now` GROUP BY `user_id`;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $rActivity[$row["user_id"]] = intval($row["count"]);
+        }
+    }
+    $table = 'user_activity_now';
+    $get = $_GET["activity_id"];
+    $primaryKey = 'activity_id';
+    if (isset($_GET["server_id"])) {
+        $extraWhere = "`server_id` = ".intval($_GET["server_id"]);
+    } else if (isset($_GET["stream_id"])) {
+        $extraWhere = "`stream_id` = ".intval($_GET["stream_id"]);
+    } else if (isset($_GET["user_id"])) {
+        $extraWhere = "`user_id` = ".intval($_GET["user_id"]);
+    } else {
+        $extraWhere = "";
+    }
+    $columns = array(
+        array('db' => 'divergence', 'dt' => 0,
+            'formatter' => function( $d, $row ) {
+                if ($d <= 15) {
+                    return '<i class="text-success fas fa-circle"></i>';
+                } else if ($d <= 50) {
+                    return '<i class="text-warning fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-danger fas fa-circle"></i>';
+                }
+            }
+        ),
+        array('db' => 'user_id', 'dt' => 1,
+            'formatter' => function( $d, $row ) {
+                return "<a href='./user.php?id=".$d."'>".getUser(intval($d))["username"]."</a>";
+            }
+        ),
+        array('db' => 'stream_id', 'dt' => 2,
+            'formatter' => function( $d, $row ) {
+                return "<a href='./stream.php?id=".$d."'>".getChannelsByID(intval($d))["stream_display_name"]."</a>";
+            }
+        ),
+        array('db' => 'server_id', 'dt' => 3,
+            'formatter' => function( $d, $row ) {
+                return "<a href='./server.php?id=".$d."'>".getStreamingServersByID(intval($d))["server_name"]."</a>";
+            }
+        ),
+        array('db' => 'user_ip', 'dt' => 4,
+            'formatter' => function( $d, $row ) {
+                if ($d) { return "<a target='_blank' href='https://www.ip-tracker.org/locator/ip-lookup.php?ip=".$d."'>".$d."</a>"; }
+            }
+        ),
+        array('db' => 'user_id', 'dt' => 5,
+            'formatter' => function( $d, $row ) {
+                global $rActivity;
+                $max = getUser(intval($d))["max_connections"];
+                if ($max == 0) {
+                    $max = "&infin;";
+                }
+                return $rActivity[intval($d)]." / ".$max;
+            }
+        ),
+        array('db' => 'geoip_country_code', 'dt' => 6,
+            'formatter' => function( $d, $row ) {
+                return "<img src='https://www.ip-tracker.org/images/ip-flags/".strtolower($d).".png'></img>";
+            }
+        ),
+        array('db' => 'pid', 'dt' => 7,
+            'formatter' => function( $d, $row ) {
+                return '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$d.', \'kill\');""><i class="fas fa-hammer"></i></button>';
+            }
+        ),
+    );    
 } else if ($_GET["id"] == "mags") {
     $table = 'mag_devices';
     $get = $_GET["id"];
@@ -282,7 +360,7 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 4,
             'formatter' => function( $d, $row, $server ) {
-                return $server["active_count"];
+                return "<a href=\"./user_activity.php?stream_id=".$row["id"]."\">".$server["active_count"]."</a>";
             }
         ),
         array('db' => 'id', 'dt' => 5,

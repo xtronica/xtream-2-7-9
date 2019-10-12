@@ -7,16 +7,7 @@ if (isset($_POST["submit_stream"])) {
         $rArray = getStream($_POST["edit"]);
         unset($rArray["id"]);
     } else {
-        $rArray = Array("type" => 1, "added" => time(), "read_native" => 0, "stream_all" => 0, "direct_source" => 0, "gen_timestamps" => 0, "transcode_attributes" => Array(), "stream_display_name" => "", "stream_source" => Array(), "category_id" => 0, "stream_icon" => "", "notes" => "", "custom_sid" => "", "custom_ffmpeg" => "", "transcode_profile_id" => 0, "enable_transcode" => 0, "auto_restart" => "[]", "allow_record" => 1, "rtmp_output" => 0, "epg_id" => 0, "channel_id" => "", "epg_lang" => "", "tv_archive_server_id" => 0, "tv_archive_duration" => 0, "delay_minutes" => 0, "external_push" => Array(), "probesize_ondemand" => 128000);
-    }
-    $rArray["stream_source"] = Array();
-    if (isset($_POST["stream_source"])) {
-        foreach ($_POST["stream_source"] as $rID => $rURL) {
-            if (strlen($rURL) > 0) {
-                $rArray["stream_source"][] = $rURL;
-            }
-        }
-        unset($_POST["stream_source"]);
+        $rArray = Array("type" => 1, "added" => time(), "read_native" => 0, "stream_all" => 0, "redirect_stream" => 1, "direct_source" => 0, "gen_timestamps" => 1, "transcode_attributes" => Array(), "stream_display_name" => "", "stream_source" => Array(), "category_id" => 0, "stream_icon" => "", "notes" => "", "custom_sid" => "", "custom_ffmpeg" => "", "transcode_profile_id" => 0, "enable_transcode" => 0, "auto_restart" => "[]", "allow_record" => 1, "rtmp_output" => 0, "epg_id" => 0, "channel_id" => "", "epg_lang" => "", "tv_archive_server_id" => 0, "tv_archive_duration" => 0, "delay_minutes" => 0, "external_push" => Array(), "probesize_ondemand" => 128000);
     }
     if ((isset($_POST["days_to_restart"])) && (preg_match("/^(?:2[0-3]|[01][0-9]):[0-5][0-9]$/", $_POST["time_to_restart"]))) {
         $rTimeArray = Array("days" => Array(), "at" => $_POST["time_to_restart"]);
@@ -95,9 +86,9 @@ if (isset($_POST["submit_stream"])) {
         $rArray["epg_id"] = $_POST["epg_id"];
         unset($_POST["epg_id"]);
     }
-    if (isset($_POST["epg_name"])) {
-        $rArray["epg_name"] = $_POST["epg_name"];
-        unset($_POST["epg_name"]);
+    if (isset($_POST["channel_id"])) {
+        $rArray["channel_id"] = $_POST["channel_id"];
+        unset($_POST["channel_id"]);
     }
     if ($rArray["transcode_profile_id"] > 0) {
         $rArray["enable_transcode"] = 1;
@@ -107,64 +98,142 @@ if (isset($_POST["submit_stream"])) {
             $rArray[$rKey] = $rValue;
         }
     }
-    $rCols = "`".implode('`,`', array_keys($rArray))."`";
-    foreach (array_values($rArray) as $rValue) {
-        isset($rValues) ? $rValues .= ',' : $rValues = '';
-        if (is_array($rValue)) {
-            $rValue = json_encode($rValue);
+    $rImportStreams = Array();
+    if ((isset($_FILES["m3u_file"])) OR (isset($_POST["m3u_url"]))) {
+        $rFile = '';
+        if (!empty($_POST['m3u_url'])) {
+            $rFile = file_get_contents($_POST['m3u_url']);
+        } else if ((!empty($_FILES['m3u_file']['tmp_name'])) && (strtolower(pathinfo($_FILES['m3u_file']['name'], PATHINFO_EXTENSION)) == "m3u")) {
+            $rFile = file_get_contents($_FILES['m3u_file']['tmp_name']);
         }
-        if (is_null($rValue)) {
-            $rValues .= 'NULL';
-        } else {
-            $rValues .= '\''.$db->real_escape_string($rValue).'\'';
+        preg_match_all('/(?P<tag>#EXTINF:-1)|(?:(?P<prop_key>[-a-z]+)=\"(?P<prop_val>[^"]+)")|(?<name>,[^\r\n]+)|(?<url>http[^\s]+)/', $rFile, $rMatches);
+        $rResults = [];
+        $rIndex = -1;
+        for ($i = 0; $i < count($rMatches[0]); $i++) {
+            $rItem = $rMatches[0][$i];
+            if (!empty($rMatches['tag'][$i])) {
+                ++$rIndex;
+            } elseif (!empty($rMatches['prop_key'][$i])) {
+                $rResults[$rIndex][$rMatches['prop_key'][$i]] = trim($rMatches['prop_val'][$i]);
+            } elseif (!empty($rMatches['name'][$i])) {
+                $rResults[$rIndex]['name'] = trim(substr($rItem, 1));
+            } elseif (!empty($rMatches['url'][$i])) {
+                $rResults[$rIndex]['url'] = trim($rItem);
+            }
         }
-    }
-    if (isset($_POST["edit"])) {
-        $rCols = "`id`,".$rCols;
-        $rValues = $_POST["edit"].",".$rValues;
-    }
-    $rQuery = "REPLACE INTO `streams`(".$rCols.") VALUES(".$rValues.");";
-    if ($db->query($rQuery)) {
-        if (isset($_POST["edit"])) {
-            $rInsertID = intval($_POST["edit"]);
-        } else {
-            $rInsertID = $db->insert_id;
+        foreach ($rResults as $rResult) {
+            $rImportArray = Array("stream_source" => Array($rResult["url"]), "stream_icon" => $rResult["tvg-logo"] ?: "", "stream_display_name" => $rResult["name"] ?: "", "epg_id" => 0, "epg_lang" => "NULL", "channel_id" => "");
+            $rEPG = findEPG($rResult["tvg-id"]);
+            if (isset($rEPG)) {
+                $rImportArray["epg_id"] = $rEPG["epg_id"];
+                $rImportArray["channel_id"] = $rEPG["channel_id"];
+                if (!empty($rEPG["epg_lang"])) {
+                    $rImportArray["epg_lang"] = $rEPG["epg_lang"];
+                }
+            }
+            $rImportStreams[] = $rImportArray;
         }
-    }
-    if (isset($rInsertID)) {
-        $db->query("DELETE FROM `streams_sys` WHERE `stream_id` = ".intval($rInsertID).";");
-        if (isset($_POST["server_tree_data"])) {
-            $rServerTree = json_decode($_POST["server_tree_data"], True);
-            foreach ($rServerTree as $rServer) {
-                if ($rServer["parent"] <> "#") {
-                    $rServerID = intval($rServer["id"]);
-                    if ($rServer["parent"] == "source") {
-                        $rParent = "NULL";
-                    } else {
-                        $rParent = intval($rServer["parent"]);
-                    }
-                    if (in_array($rServerID, $rOnDemandArray)) {
-                        $rOD = 1;
-                    } else {
-                        $rOD = 0;
-                    }
-                    $db->query("INSERT INTO `streams_sys`(`stream_id`, `server_id`, `parent_id`, `on_demand`) VALUES(".intval($rInsertID).", ".$rServerID.", ".$rParent.", ".$rOD.");");
+    } else {
+        $rImportArray = Array("stream_source" => Array(), "stream_icon" => $rArray["stream_icon"], "stream_display_name" => $rArray["stream_display_name"], "epg_id" => $rArray["stream_icon"], "epg_lang" => $rArray["epg_lang"], "channel_id" => $rArray["channel_id"]);
+        if (isset($_POST["stream_source"])) {
+            foreach ($_POST["stream_source"] as $rID => $rURL) {
+                if (strlen($rURL) > 0) {
+                    $rImportArray["stream_source"][] = $rURL;
                 }
             }
         }
-        $db->query("DELETE FROM `streams_options` WHERE `stream_id` = ".intval($rInsertID).";");
-        if ((isset($_POST["user_agent"])) && (strlen($_POST["user_agent"]) > 0)) {
-            $db->query("INSERT INTO `streams_options`(`stream_id`, `argument_id`, `value`) VALUES(".intval($rInsertID).", 1, '".$db->real_escape_string($_POST["user_agent"])."');");
+        $rImportStreams[] = $rImportArray;
+    }
+    if (count($rImportStreams) > 0) {
+        foreach ($rImportStreams as $rImportStream) {
+            $rImportArray = $rArray;
+            foreach (array_keys($rImportStream) as $rKey) {
+                $rImportArray[$rKey] = $rImportStream[$rKey];
+            }
+            $rCols = "`".implode('`,`', array_keys($rImportArray))."`";
+            $rValues = null;
+            foreach (array_values($rImportArray) as $rValue) {
+                isset($rValues) ? $rValues .= ',' : $rValues = '';
+                if (is_array($rValue)) {
+                    $rValue = json_encode($rValue);
+                }
+                if (is_null($rValue)) {
+                    $rValues .= 'NULL';
+                } else {
+                    $rValues .= '\''.$db->real_escape_string($rValue).'\'';
+                }
+            }
+            if (isset($_POST["edit"])) {
+                $rCols = "`id`,".$rCols;
+                $rValues = $_POST["edit"].",".$rValues;
+            }
+            $rQuery = "REPLACE INTO `streams`(".$rCols.") VALUES(".$rValues.");";
+            if ($db->query($rQuery)) {
+                if (isset($_POST["edit"])) {
+                    $rInsertID = intval($_POST["edit"]);
+                } else {
+                    $rInsertID = $db->insert_id;
+                }
+            }
+            if (isset($rInsertID)) {
+                $rStreamExists = Array();
+                if (isset($_POST["edit"])) {
+                    $result = $db->query("SELECT `server_stream_id`, `server_id` FROM `streams_sys` WHERE `stream_id` = ".intval($rInsertID).";");
+                    if (($result) && ($result->num_rows > 0)) {
+                        while ($row = $result->fetch_assoc()) {
+                            $rStreamExists[intval($row["server_id"])] = intval($row["server_stream_id"]);
+                        }
+                    }
+                }
+                if (isset($_POST["server_tree_data"])) {
+                    $rStreamsAdded = Array();
+                    $rServerTree = json_decode($_POST["server_tree_data"], True);
+                    foreach ($rServerTree as $rServer) {
+                        if ($rServer["parent"] <> "#") {
+                            $rServerID = intval($rServer["id"]);
+                            $rStreamsAdded[] = $rServerID;
+                            if ($rServer["parent"] == "source") {
+                                $rParent = "NULL";
+                            } else {
+                                $rParent = intval($rServer["parent"]);
+                            }
+                            if (in_array($rServerID, $rOnDemandArray)) {
+                                $rOD = 1;
+                            } else {
+                                $rOD = 0;
+                            }
+                            if (isset($rStreamExists[$rServerID])) {
+                                $db->query("UPDATE `streams_sys` SET `parent_id` = ".$rParent.", `on_demand` = ".$rOD." WHERE `id` = ".$rStreamExists[$rServerID].";");
+                            } else {
+                                $db->query("INSERT INTO `streams_sys`(`stream_id`, `server_id`, `parent_id`, `on_demand`) VALUES(".intval($rInsertID).", ".$rServerID.", ".$rParent.", ".$rOD.");");
+                            }
+                        }
+                    }
+                    foreach ($rStreamExists as $rServerID => $rDBID) {
+                        if (!in_array($rServerID, $rStreamsAdded)) {
+                            $db->query("DELETE FROM `streams_sys` WHERE `id` = ".$rDBID.";");
+                        }
+                    }
+                }
+                $db->query("DELETE FROM `streams_options` WHERE `stream_id` = ".intval($rInsertID).";");
+                if ((isset($_POST["user_agent"])) && (strlen($_POST["user_agent"]) > 0)) {
+                    $db->query("INSERT INTO `streams_options`(`stream_id`, `argument_id`, `value`) VALUES(".intval($rInsertID).", 1, '".$db->real_escape_string($_POST["user_agent"])."');");
+                }
+                if ((isset($_POST["http_proxy"])) && (strlen($_POST["http_proxy"]) > 0)) {
+                    $db->query("INSERT INTO `streams_options`(`stream_id`, `argument_id`, `value`) VALUES(".intval($rInsertID).", 2, '".$db->real_escape_string($_POST["http_proxy"])."');");
+                }
+                $_STATUS = 0;
+            } else {
+                $_STATUS = 1;
+            }
         }
-        if ((isset($_POST["http_proxy"])) && (strlen($_POST["http_proxy"]) > 0)) {
-            $db->query("INSERT INTO `streams_options`(`stream_id`, `argument_id`, `value`) VALUES(".intval($rInsertID).", 2, '".$db->real_escape_string($_POST["http_proxy"])."');");
+        if ((isset($_FILES["m3u_file"])) OR (isset($_POST["m3u_url"]))) {
+            header("Location: ./streams.php");exit;
+        } else if (!isset($_GET["id"])) {
+            $_GET["id"] = $rInsertID;
         }
-        $_STATUS = 0;
     } else {
         $_STATUS = 1;
-    }
-    if (!isset($_GET["id"])) {
-        $_GET["id"] = $rInsertID;
     }
 }
 
@@ -181,6 +250,7 @@ $rServerTree = Array();
 $rOnDemand = Array();
 $rServerTree[] = Array("id" => "source", "parent" => "#", "text" => "<strong>Stream Source</strong>", "icon" => "mdi mdi-youtube-tv", "state" => Array("opened" => true));
 if (isset($_GET["id"])) {
+    if (isset($_GET["import"])) { exit; }
     $rStream = getStream($_GET["id"]);
     if (!$rStream) {
         exit;
@@ -221,7 +291,7 @@ include "header.php"; ?>
                                     <a href="./streams.php<?php if (isset($_GET["category"])) { echo "?category=".$_GET["category"]; } ?>"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Streams</li></a>
                                 </ol>
                             </div>
-                            <h4 class="page-title"><?php if (isset($rStream)) { echo $rStream["stream_display_name"]; } else { echo "Add Stream"; } ?></h4>
+                            <h4 class="page-title"><?php if (isset($rStream)) { echo $rStream["stream_display_name"]; } else if (isset($_GET["import"])) { echo "Import Streams"; } else { echo "Add Stream"; } ?></h4>
                         </div>
                     </div>
                 </div>     
@@ -270,7 +340,7 @@ include "header.php"; ?>
                         <?php } ?>
                         <div class="card">
                             <div class="card-body">
-                                <form action="./stream.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="stream_form">
+                                <form<?php if(isset($_GET["import"])) { echo " enctype=\"multipart/form-data\""; } ?> action="./stream.php<?php if (isset($_GET["import"])) { echo "?import"; } else if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="stream_form">
                                     <?php if (isset($rStream)) { ?>
                                     <input type="hidden" name="edit" value="<?=$rStream["id"]?>" />
                                     <?php } ?>
@@ -295,12 +365,14 @@ include "header.php"; ?>
                                                     <span class="d-none d-sm-inline">Auto Restart</span>
                                                 </a>
                                             </li>
+                                            <?php if (!isset($_GET["import"])) { ?>
                                             <li class="nav-item">
                                                 <a href="#epg-options" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2">
                                                     <i class="mdi mdi-television-guide mr-1"></i>
                                                     <span class="d-none d-sm-inline">EPG</span>
                                                 </a>
                                             </li>
+                                            <?php } ?>
                                             <li class="nav-item">
                                                 <a href="#load-balancing" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2">
                                                     <i class="mdi mdi-server-network mr-1"></i>
@@ -312,6 +384,7 @@ include "header.php"; ?>
                                             <div class="tab-pane" id="stream-details">
                                                 <div class="row">
                                                     <div class="col-12">
+                                                        <?php if (!isset($_GET["import"])) { ?>
                                                         <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="stream_display_name">Stream Name</label>
                                                             <div class="col-md-8">
@@ -333,13 +406,29 @@ include "header.php"; ?>
                                                                 <div class="col-md-8 input-group">
                                                                     <input type="text" id="stream_source" name="stream_source[]" class="form-control" value="<?=$rStreamSource?>">
                                                                     <div class="input-group-append">
-                                                                        <button class="btn btn-dark waves-effect waves-light" onClick="addStream();" type="button"><i class="mdi mdi-plus"></i></button>
+                                                                        <button class="btn btn-info waves-effect waves-light" onClick="moveUp(this);" type="button"><i class="mdi mdi-chevron-up"></i></button>
+                                                                        <button class="btn btn-info waves-effect waves-light" onClick="moveDown(this);" type="button"><i class="mdi mdi-chevron-down"></i></button>
+                                                                        <button class="btn btn-primary waves-effect waves-light" onClick="addStream();" type="button"><i class="mdi mdi-plus"></i></button>
                                                                         <button class="btn btn-danger waves-effect waves-light" onClick="removeStream(this);" type="button"><i class="mdi mdi-close"></i></button>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             <?php } ?>
                                                         </span>
+                                                        <?php } else { ?>
+                                                        <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="m3u_url">M3U URL</label>
+                                                            <div class="col-md-8">
+                                                                <input type="text" class="form-control" id="m3u_url" name="m3u_url" value="">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="m3u_file">M3U File</label>
+                                                            <div class="col-md-8">
+                                                                <input type="file" id="m3u_file" name="m3u_file" />
+                                                            </div>
+                                                        </div>
+                                                        <?php } ?>
                                                         <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="category_id">Category Name</label>
                                                             <div class="col-md-8">
@@ -350,12 +439,14 @@ include "header.php"; ?>
                                                                 </select>
                                                             </div>
                                                         </div>
+                                                        <?php if (!isset($_GET["import"])) { ?>
                                                         <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="stream_icon">Stream Logo URL</label>
                                                             <div class="col-md-8">
                                                                 <input type="text" class="form-control" id="stream_icon" name="stream_icon" value="<?php if (isset($rStream)) { echo $rStream["stream_icon"]; } ?>">
                                                             </div>
                                                         </div>
+                                                        <?php } ?>
                                                         <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="notes">Notes</label>
                                                             <div class="col-md-8">
@@ -503,7 +594,7 @@ include "header.php"; ?>
                                                     </li>
                                                 </ul>
                                             </div>
-
+                                            <?php if (!isset($_GET["import"])) { ?>
                                             <div class="tab-pane" id="epg-options">
                                                 <div class="row">
                                                     <div class="col-12">
@@ -553,7 +644,7 @@ include "header.php"; ?>
                                                     </li>
                                                 </ul>
                                             </div>
-                                            
+                                            <?php } ?>
                                             <div class="tab-pane" id="load-balancing">
                                                 <div class="row">
                                                     <div class="col-12">
@@ -602,8 +693,6 @@ include "header.php"; ?>
                                                     </li>
                                                 </ul>
                                             </div>
-
-
                                         </div> <!-- tab-content -->
                                     </div> <!-- end #basicwizard-->
                                 </form>
@@ -616,11 +705,34 @@ include "header.php"; ?>
         </div>
         <!-- end wrapper -->
 
+        <!-- file preview template -->
+        <div class="d-none" id="uploadPreviewTemplate">
+            <div class="card mt-1 mb-0 shadow-none border">
+                <div class="p-2">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <img data-dz-thumbnail class="avatar-sm rounded bg-light" alt="">
+                        </div>
+                        <div class="col pl-0">
+                            <a href="javascript:void(0);" class="text-muted font-weight-bold" data-dz-name></a>
+                            <p class="mb-0" data-dz-size></p>
+                        </div>
+                        <div class="col-auto">
+                            <!-- Button -->
+                            <a href="" class="btn btn-link btn-lg text-muted" data-dz-remove>
+                                <i class="mdi mdi-close-circle"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer Start -->
         <footer class="footer">
             <div class="container-fluid">
                 <div class="row">
-                    <div class="col-md-12  text-center">Xtream Codes - Admin UI</div>
+                    <div class="col-md-12 copyright text-center"><?=getFooter()?></div>
                 </div>
             </div>
         </footer>
@@ -676,6 +788,16 @@ include "header.php"; ?>
           };
         }(jQuery));
         
+        function moveUp(elem) {
+            if ($(elem).parent().parent().parent().prevAll().length > 0) {
+                $(elem).parent().parent().parent().insertBefore($('.streams>div').eq($(elem).parent().parent().parent().prevAll().length-1));
+            }
+        }
+        function moveDown(elem) {
+            if ($(elem).parent().parent().parent().prevAll().length < $(".streams>div").length) {
+                $(elem).parent().parent().parent().insertAfter($('.streams>div').eq($(elem).parent().parent().parent().prevAll().length+1));
+            }
+        }
         function addStream() {
             $(".stream-url:first").clone().appendTo(".streams");
             $(".stream-url:last label").html("Stream URL");
@@ -764,11 +886,17 @@ include "header.php"; ?>
             });
             
             $("#stream_form").submit(function(e){
+                <?php if (!isset($_GET["import"])) { ?>
                 if ($("#stream_display_name").val().length == 0) {
                     e.preventDefault();
                     $.toast("Enter a stream name.");
                 }
-                
+                <?php } else { ?>
+                if (($("#m3u_file").val().length == 0) && ($("#m3u_url").val().length == 0)) {
+                    e.preventDefault();
+                    $.toast("Please select a M3U file to upload or enter an URL.");
+                }
+                <?php } ?>
                 $("#server_tree_data").val(JSON.stringify($('#server_tree').jstree(true).get_json('#', {flat:true})));
                 rPass = false;
                 $.each($('#server_tree').jstree(true).get_json('#', {flat:true}), function(k,v) {
