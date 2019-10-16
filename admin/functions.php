@@ -676,7 +676,7 @@ function getIP(){
 
 function getPermissions($rID) {
     global $db;
-    $result = $db->query("SELECT `*` FROM `member_groups` WHERE `group_id` = ".intval($rID).";");
+    $result = $db->query("SELECT * FROM `member_groups` WHERE `group_id` = ".intval($rID).";");
     if (($result) && ($result->num_rows == 1)) {
         return $result->fetch_assoc();
     }
