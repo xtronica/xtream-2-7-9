@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_bouquet"])) {
     $rArray = Array("bouquet_name" => "", "bouquet_channels" => Array(), "bouquet_series" => Array());
@@ -420,30 +421,31 @@ include "header.php"; ?>
             var rIndex = rBouquet[rType].indexOf(String(rID));
             if (rIndex > -1) {
                 rBouquet[rType] = jQuery.grep(rBouquet[rType], function(rValue) {
-                  return String(rValue) != String(rID);
+                    return String(rValue) != String(rID);
                 });
             } else {
                 rBouquet[rType].push(String(rID));
             }
-            if (rType == "stream") {
-                $("#datatable-streams").DataTable().ajax.reload(null, false);
-                $("#datatable-vod").DataTable().ajax.reload(null, false);
-            } else {
-                $("#datatable-series").DataTable().ajax.reload(null, false);
-            }
             if (rReview == true) {
+                if (rType == "stream") {
+                    $("#datatable-streams").DataTable().ajax.reload(null, false);
+                } else if (rType == "vod") {
+                    $("#datatable-vod").DataTable().ajax.reload(null, false);
+                } else {
+                    $("#datatable-series").DataTable().ajax.reload(null, false);
+                }
                 reviewBouquet()
             }
         }
         
         function toggleBouquets(rPage) {
             $("#" + rPage + " tr").each(function() {
-                $(this).find("td:last-child button").each(function() {
-                    if ($(this).is(":visible")) {
-                        $(this).click();
-                    }
+                $(this).find("td:last-child button").filter(':visible').each(function() {
+                    toggleBouquet($(this).data("id"), $(this).data("type"), false);
                 });
             });
+            $("#" + rPage).DataTable().ajax.reload(null, false);
+            reviewBouquet()
         }
         
         $(document).ready(function() {
@@ -469,7 +471,7 @@ include "header.php"; ?>
                 bInfo: false,
                 bAutoWidth: false,
                 searching: true,
-                pageLength: 50,
+                pageLength: 100,
                 lengthChange: false,
                 processing: true,
                 serverSide: true,
@@ -506,7 +508,7 @@ include "header.php"; ?>
                 bInfo: false,
                 bAutoWidth: false,
                 searching: true,
-                pageLength: 50,
+                pageLength: 100,
                 lengthChange: false,
                 processing: true,
                 serverSide: true,
@@ -543,7 +545,7 @@ include "header.php"; ?>
                 bInfo: false,
                 bAutoWidth: false,
                 searching: true,
-                pageLength: 50,
+                pageLength: 100,
                 lengthChange: false,
                 processing: true,
                 serverSide: true,
@@ -571,7 +573,7 @@ include "header.php"; ?>
                 bInfo: false,
                 bAutoWidth: false,
                 searching: true,
-                pageLength: 50,
+                pageLength: 100,
                 lengthChange: false,
                 columnDefs: [
                     {"className": "dt-center", "targets": [0,1,3]}

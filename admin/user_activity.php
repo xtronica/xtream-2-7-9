@@ -1,8 +1,6 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
-if (!$rPermissions["is_admin"]) { exit; }
-
 include "header.php";
 ?>        <div class="wrapper">
             <div class="container-fluid">
@@ -11,25 +9,48 @@ include "header.php";
                 <div class="row">
                     <div class="col-12">
                         <div class="page-title-box">
-                            <h4 class="page-title">MAG Events</h4>
+                            <div class="page-title-right">
+                                <ol class="breadcrumb m-0">
+                                    <li>
+                                        <?php if (!$detect->isMobile()) { ?>
+                                        <a href="#" onClick="toggleAuto();" style="margin-right:10px;">
+                                            <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-refresh"></i> <span class="auto-text">Auto-Refresh</span>
+                                            </button>
+                                        </a>
+                                        <?php } else { ?>
+                                        <a href="javascript:location.reload();" onClick="toggleAuto();" style="margin-right:10px;">
+                                            <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-refresh"></i> Refresh
+                                            </button>
+                                        </a>
+                                        <?php } ?>
+                                    </li>
+                                </ol>
+                            </div>
+                            <h4 class="page-title">Activity Logs</h4>
                         </div>
                     </div>
                 </div>     
                 <!-- end page title --> 
-
                 <div class="row">
                     <div class="col-12">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
+                        </div>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
                                 <table id="datatable" class="table dt-responsive nowrap">
                                     <thead>
                                         <tr>
-                                            <th class="text-center">Date</th>
-                                            <th class="text-center">Status</th>
-                                            <th class="text-center">MAC Address</th>
-                                            <th>Event</th>
-                                            <th>Message</th>
-                                            <th class="text-center">Actions</th>
+                                            <th class="text-center">ID</th>
+                                            <th>Username</th>
+                                            <th>Channel</th>
+                                            <th>Server</th>
+                                            <th class="text-center">Start</th>
+                                            <th class="text-center">Stop</th>
+                                            <th class="text-center">IP</th>
+                                            <th class="text-center">Country</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -60,6 +81,7 @@ include "header.php";
         <!-- third party js -->
         <script src="assets/libs/datatables/jquery.dataTables.min.js"></script>
         <script src="assets/libs/datatables/dataTables.bootstrap4.js"></script>
+        <script src="assets/libs/select2/select2.min.js"></script>
         <script src="assets/libs/datatables/dataTables.responsive.min.js"></script>
         <script src="assets/libs/datatables/responsive.bootstrap4.min.js"></script>
         <script src="assets/libs/datatables/dataTables.buttons.min.js"></script>
@@ -75,41 +97,37 @@ include "header.php";
 
         <!-- Datatables init -->
         <script>
-        function api(rID, rType) {
-            if (rType == "delete") {
-                if (confirm('Are you sure you want to delete this event?') == false) {
-                    return;
-                }
+        var autoRefresh = true;
+        
+        function toggleAuto() {
+            if (autoRefresh == true) {
+                autoRefresh = false;
+                $(".auto-text").html("Manual Mode");
+            } else {
+                autoRefresh = true;
+                $(".auto-text").html("Auto-Refresh");
             }
-            $.getJSON("./api.php?action=mag_event&sub=" + rType + "&mag_id=" + rID, function(data) {
-                if (data.result === true) {
-                    if (rType == "delete") {
-                        $.toast("Event has been deleted.");
-                    }
-                    $.each($('.tooltip'), function (index, element) {
-                        $(this).remove();
-                    });
-                    $("#datatable").DataTable().ajax.reload(null, false);
-                } else {
-                    $.toast("An error occured while processing your request.");
-                }
-            });
         }
         
+        function reloadUsers() {
+            if (autoRefresh == true) {
+                $("#datatable").DataTable().ajax.reload(null, false);
+            }
+            setTimeout(reloadUsers, 2000);
+        }
         $(document).ready(function() {
+            $('select').select2({width: '100%'});
             $("#datatable").DataTable({
                 language: {
                     paginate: {
                         previous: "<i class='mdi mdi-chevron-left'>",
                         next: "<i class='mdi mdi-chevron-right'>"
-                    }
+                    },
+                    infoFiltered: ""
                 },
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
                     $('[data-toggle="tooltip"]').tooltip();
-                },
-                createdRow: function(row, data, index) {
-                    $(row).addClass('mag-' + data[0]);
                 },
                 responsive: false,
                 processing: true,
@@ -117,13 +135,22 @@ include "header.php";
                 ajax: {
                     url: "./table.php",
                     "data": function(d) {
-                        d.id = "mag_events";
+                        d.id = "user_activity";
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,1,2,5]}
+                    {"className": "dt-center", "targets": [0,4,5,6,7]},
+                    <?php if ($rUserInfo["is_admin"]) { ?>
+                    {"visible": false, "targets": [8]}
+                    <?php } else { ?>
+                    {"visible": false, "targets": [3,8]}
+                    <?php } ?>
                 ],
+                "order": [[ 0, "desc" ]]
             });
+            <?php if (!$detect->isMobile()) { ?>
+            setTimeout(reloadUsers, 5000);
+            <?php } ?>
         });
         </script>
 

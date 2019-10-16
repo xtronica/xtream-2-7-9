@@ -3,6 +3,7 @@ include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
 if (!$rPermissions["is_admin"]) { exit; }
 
+$rProfiles = getTranscodeProfiles();
 include "header.php";
 ?>        <div class="wrapper">
             <div class="container-fluid">
@@ -11,7 +12,18 @@ include "header.php";
                 <div class="row">
                     <div class="col-12">
                         <div class="page-title-box">
-                            <h4 class="page-title">MAG Events</h4>
+                            <div class="page-title-right">
+                                <ol class="breadcrumb m-0">
+                                    <li>
+                                        <a href="profile.php">
+                                            <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-plus"></i> Add Profile
+                                            </button>
+                                        </a>
+                                    </li>
+                                </ol>
+                            </div>
+                            <h4 class="page-title">Transcode Profiles</h4>
                         </div>
                     </div>
                 </div>     
@@ -24,17 +36,27 @@ include "header.php";
                                 <table id="datatable" class="table dt-responsive nowrap">
                                     <thead>
                                         <tr>
-                                            <th class="text-center">Date</th>
-                                            <th class="text-center">Status</th>
-                                            <th class="text-center">MAC Address</th>
-                                            <th>Event</th>
-                                            <th>Message</th>
+                                            <th class="text-center">ID</th>
+                                            <th>Profile Name</th>
+                                            <th>Options</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody></tbody>
+                                    <tbody>
+                                        <?php foreach ($rProfiles as $rProfile) {
+                                        ?>
+                                        <tr id="profile-<?=$rProfile["profile_id"]?>">
+                                            <td class="text-center"><?=$rProfile["profile_id"]?></td>
+                                            <td><?=$rProfile["profile_name"]?></td>
+                                            <td><?=(strlen($rProfile["profile_options"]) > 50 ? substr($rProfile["profile_options"],0,50)."..." : $rProfile["profile_options"])?></td>
+                                            <td class="text-center">
+                                                <a href="./profile.php?id=<?=$rProfile["profile_id"]?>"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                                                <button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api(<?=$rProfile["profile_id"]?>, 'delete');"><i class="mdi mdi-close"></i></button>
+                                            </td>
+                                        </tr>
+                                        <?php } ?>
+                                    </tbody>
                                 </table>
-
                             </div> <!-- end card body-->
                         </div> <!-- end card -->
                     </div><!-- end col-->
@@ -73,23 +95,23 @@ include "header.php";
         <script src="assets/libs/pdfmake/vfs_fonts.js"></script>
         <!-- third party js ends -->
 
-        <!-- Datatables init -->
         <script>
         function api(rID, rType) {
             if (rType == "delete") {
-                if (confirm('Are you sure you want to delete this event?') == false) {
+                if (confirm('Are you sure you want to delete this profile? This cannot be undone!') == false) {
                     return;
                 }
             }
-            $.getJSON("./api.php?action=mag_event&sub=" + rType + "&mag_id=" + rID, function(data) {
+            $.getJSON("./api.php?action=profile&sub=" + rType + "&profile_id=" + rID, function(data) {
                 if (data.result === true) {
                     if (rType == "delete") {
-                        $.toast("Event has been deleted.");
+                        $("#profile-" + rID).remove();
+                        $.toast("Profile successfully deleted.");
                     }
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
                     });
-                    $("#datatable").DataTable().ajax.reload(null, false);
+                    $('[data-toggle="tooltip"]').tooltip();
                 } else {
                     $.toast("An error occured while processing your request.");
                 }
@@ -106,23 +128,8 @@ include "header.php";
                 },
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
-                    $('[data-toggle="tooltip"]').tooltip();
                 },
-                createdRow: function(row, data, index) {
-                    $(row).addClass('mag-' + data[0]);
-                },
-                responsive: false,
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: "./table.php",
-                    "data": function(d) {
-                        d.id = "mag_events";
-                    }
-                },
-                columnDefs: [
-                    {"className": "dt-center", "targets": [0,1,2,5]}
-                ],
+                responsive: false
             });
         });
         </script>

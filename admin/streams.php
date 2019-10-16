@@ -24,25 +24,25 @@ include "header.php";
                                 <ol class="breadcrumb m-0">
                                     <li>
                                         <?php if (!$detect->isMobile()) { ?>
-                                        <a href="#" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="#" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> <span class="auto-text">Auto-Refresh</span>
                                             </button>
                                         </a>
                                         <?php } else { ?>
-                                        <a href="javascript:location.reload();" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="javascript:location.reload();" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> Refresh
                                             </button>
                                         </a>
-                                        <?php } ?>
-                                    </li>
-                                    <li>
+                                        <?php }
+                                        if ($rPermissions["is_admin"]) { ?>
                                         <a href="stream.php<?php if($rCategory) { echo "?category=".$rCategory["id"]; }?>">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-plus"></i> Add Stream
                                             </button>
                                         </a>
+                                        <?php } ?>
                                     </li>
                                 </ol>
                             </div>
@@ -54,23 +54,49 @@ include "header.php";
 
                 <div class="row">
                     <div class="col-12">
+                        <?php if ($rPermissions["is_admin"]) { ?>
                         <div class="alert alert-warning" role="alert">
                             <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
                         </div>
+                        <?php } ?>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
-                                <table id="datatable" class="table dt-responsive nowrap">
+                                <div class="form-group row mb-4">
+                                    <label class="col-md-2 col-form-label text-center" for="category_name">Category Name</label>
+                                    <div class="col-md-2">
+                                        <select id="category_id" class="form-control" data-toggle="select2">
+                                            <option value="" selected>All Categories</option>
+                                            <?php foreach ($rCategories as $rCategory) { ?>
+                                            <option value="<?=$rCategory["id"]?>"><?=$rCategory["category_name"]?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <label class="col-md-2 col-form-label text-center" for="stream_search">Search Streams</label>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control" id="stream_search" value="">
+                                    </div>
+                                    <label class="col-md-2 col-form-label text-center" for="show_entries">Entries to Show</label>
+                                    <div class="col-md-2">
+                                        <select id="show_entries" class="form-control" data-toggle="select2">
+                                            <option value="10" selected>10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <table id="datatable-streampage" style="font-family: tahoma;" class="table dt-responsive nowrap">
                                     <thead>
-                                        <tr>
+                                        <tr style="<?php echo $background ?>">
                                             <th class="text-center">ID</th>
                                             <th>Name</th>
-                                            <th>Category</th>
-                                            <th>Server</th>
+                                            <th class="text-center">Current Source</th>
+                                            <th class="text-center">Server</th>
                                             <th class="text-center">Clients</th>
                                             <th class="text-center">Uptime</th>
                                             <th class="text-center">Actions</th>
                                             <th class="text-center">Player</th>
-                                            <th>Stream Info</th>
+                                            <th class="text-center">Stream Info</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -99,6 +125,7 @@ include "header.php";
 
         <script>
         var autoRefresh = true;
+        var rCategory = "";
         
         function toggleAuto() {
             if (autoRefresh == true) {
@@ -130,7 +157,7 @@ include "header.php";
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
                     });
-                    $("#datatable").DataTable().ajax.reload( null, false );
+                    $("#datatable-streampage").DataTable().ajax.reload( null, false );
                 } else {
                     $.toast("An error occured while processing your request.");
                 }
@@ -148,12 +175,16 @@ include "header.php";
         }
         function reloadStreams() {
             if (autoRefresh == true) {
-                $("#datatable").DataTable().ajax.reload( null, false );
+                $("#datatable-streampage").DataTable().ajax.reload( null, false );
             }
             setTimeout(reloadStreams, 5000);
         }
+        function getCategory() {
+            return window.rCategory;
+        }
         $(document).ready(function() {
-            $("#datatable").DataTable({
+            $('select').select2({width: '100%'});
+            $("#datatable-streampage").DataTable({
                 language: {
                     paginate: {
                         previous: "<i class='mdi mdi-chevron-left'>",
@@ -174,13 +205,26 @@ include "header.php";
                     url: "./table.php",
                     "data": function(d) {
                         d.id = "streams",
-                        d.category = "<?=$_GET["category"]?>"
+                        d.category = getCategory();
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,4,5,6,7]}
-                ],
+                    {"className": "dt-center", "targets": [0,2,3,4,5,6,7]},
+                    <?php if (!$rPermissions["is_admin"]) { ?>
+                    {"targets": [2, 5, 6, 7], "visible": false, "searchable": false},
+                    <?php } ?>
+                ]
             });
+            $('#stream_search').keyup(function(){
+                $('#datatable-streampage').DataTable().search($(this).val()).draw();
+            })
+            $('#show_entries').change(function(){
+                $('#datatable-streampage').DataTable().page.len($(this).val()).draw();
+            })
+            $('#category_id').change(function(){
+                window.rCategory = $(this).val();
+                $("#datatable-streampage").DataTable().ajax.reload( null, false );
+            })
             <?php if (!$detect->isMobile()) { ?>
             setTimeout(reloadStreams, 5000);
             <?php } ?>
@@ -188,6 +232,7 @@ include "header.php";
         </script>
 
         <!-- third party js -->
+        <script src="assets/libs/select2/select2.min.js"></script>
         <script src="assets/libs/datatables/jquery.dataTables.min.js"></script>
         <script src="assets/libs/datatables/dataTables.bootstrap4.js"></script>
         <script src="assets/libs/datatables/dataTables.responsive.min.js"></script>

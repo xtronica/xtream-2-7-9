@@ -3,15 +3,33 @@ include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
 if (!$rPermissions["is_admin"]) { exit; }
 
-include "header.php";
-?>        <div class="wrapper">
-            <div class="container-fluid">
+checkTable("subreseller_setup");
+$rMemberGroups = getMemberGroups();
 
+include "header.php";
+?>        <div class="wrapper boxed-layout">
+            <div class="container-fluid">
                 <!-- start page title -->
                 <div class="row">
                     <div class="col-12">
                         <div class="page-title-box">
-                            <h4 class="page-title">MAG Events</h4>
+                            <div class="page-title-right">
+                                <ol class="breadcrumb m-0">
+                                    <li>
+                                        <a href="reg_users.php">
+                                            <button type="button" class="btn btn-info waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-account-group"></i> Registered Users
+                                            </button>
+                                        </a>
+                                        <a href="subreseller_setup.php">
+                                            <button type="button" class="btn btn-primary waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-plus"></i> Setup Access
+                                            </button>
+                                        </a>
+                                    </li>
+                                </ol>
+                            </div>
+                            <h4 class="page-title">Subreseller Setup</h4>
                         </div>
                     </div>
                 </div>     
@@ -24,17 +42,26 @@ include "header.php";
                                 <table id="datatable" class="table dt-responsive nowrap">
                                     <thead>
                                         <tr>
-                                            <th class="text-center">Date</th>
-                                            <th class="text-center">Status</th>
-                                            <th class="text-center">MAC Address</th>
-                                            <th>Event</th>
-                                            <th>Message</th>
+                                            <th class="text-center">ID</th>
+                                            <th>Reseller Owner</th>
+                                            <th>Subreseller</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody></tbody>
+                                    <tbody>
+                                        <?php foreach (getSubresellerSetups() as $rItem) { ?>
+                                        <tr id="setup-<?=$rItem["id"]?>">
+                                            <td class="text-center"><?=$rItem["id"]?></td>
+                                            <td><?=$rMemberGroups[$rItem["reseller"]]["group_name"]?></td>
+                                            <td><?=$rMemberGroups[$rItem["subreseller"]]["group_name"]?></td>
+                                            <td class="text-center">
+                                                <a href="./subreseller_setup.php?id=<?=$rItem["id"]?>"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                                                <button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api(<?=$rItem["id"]?>, 'delete');"><i class="mdi mdi-close"></i></button>
+                                            </td>
+                                        </tr>
+                                        <?php } ?>
+                                    </tbody>
                                 </table>
-
                             </div> <!-- end card body-->
                         </div> <!-- end card -->
                     </div><!-- end col-->
@@ -73,29 +100,29 @@ include "header.php";
         <script src="assets/libs/pdfmake/vfs_fonts.js"></script>
         <!-- third party js ends -->
 
-        <!-- Datatables init -->
         <script>
         function api(rID, rType) {
             if (rType == "delete") {
-                if (confirm('Are you sure you want to delete this event?') == false) {
+                if (confirm('Are you sure you want to delete this setup? This cannot be undone!') == false) {
                     return;
                 }
             }
-            $.getJSON("./api.php?action=mag_event&sub=" + rType + "&mag_id=" + rID, function(data) {
+            $.getJSON("./api.php?action=subreseller_setup&sub=" + rType + "&id=" + rID, function(data) {
                 if (data.result === true) {
                     if (rType == "delete") {
-                        $.toast("Event has been deleted.");
+                        $("#setup-" + rID).remove();
+                        $.toast("Setup successfully deleted.");
                     }
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
                     });
-                    $("#datatable").DataTable().ajax.reload(null, false);
+                    $('[data-toggle="tooltip"]').tooltip();
                 } else {
                     $.toast("An error occured while processing your request.");
                 }
             });
         }
-        
+
         $(document).ready(function() {
             $("#datatable").DataTable({
                 language: {
@@ -106,23 +133,11 @@ include "header.php";
                 },
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
-                    $('[data-toggle="tooltip"]').tooltip();
                 },
-                createdRow: function(row, data, index) {
-                    $(row).addClass('mag-' + data[0]);
-                },
-                responsive: false,
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: "./table.php",
-                    "data": function(d) {
-                        d.id = "mag_events";
-                    }
-                },
-                columnDefs: [
-                    {"className": "dt-center", "targets": [0,1,2,5]}
-                ],
+                bInfo: false,
+                searching: false,
+                paging: false,
+                responsive: false
             });
         });
         </script>

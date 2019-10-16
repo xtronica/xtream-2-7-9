@@ -13,21 +13,19 @@ include "header.php";
                                 <ol class="breadcrumb m-0">
                                     <li>
                                         <?php if (!$detect->isMobile()) { ?>
-                                        <a href="#" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="#" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> <span class="auto-text">Auto-Refresh</span>
                                             </button>
                                         </a>
                                         <?php } else { ?>
-                                        <a href="javascript:location.reload();" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="javascript:location.reload();" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> Refresh
                                             </button>
                                         </a>
                                         <?php } ?>
-                                    </li>
-                                    <li>
-                                        <a href="user.php">
+                                        <a href="user<?php if ($rPermissions["is_reseller"]) { echo "_reseller"; } ?>.php">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-plus"></i> Add User
                                             </button>
@@ -56,6 +54,7 @@ include "header.php";
                                             <th>Owner</th>
                                             <th class="text-center">Status</th>
                                             <th class="text-center">Online</th>
+                                            <th class="text-center">Trial</th>
                                             <th class="text-center">Expiration</th>
                                             <th class="text-center">Connections</th>
                                             <th class="text-center">Last Connection</th>
@@ -71,6 +70,7 @@ include "header.php";
                 </div>
                 <!-- end row-->
             </div> <!-- end container -->
+            <?php if ((($rPermissions["is_reseller"]) && ($rPermissions["allow_download"])) OR ($rPermissions["is_admin"])) { ?>
             <div class="modal fade downloadModal" tabindex="-1" role="dialog" aria-labelledby="downloadLabel" aria-hidden="true" style="display: none;" data-username="" data-password="">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -165,6 +165,7 @@ include "header.php";
                     </div><!-- /.modal-content -->
                 </div><!-- /.modal-dialog -->
             </div><!-- /.modal -->
+            <?php } ?>
         </div>
         <!-- end wrapper -->
         <!-- Footer Start -->
@@ -285,8 +286,9 @@ include "header.php";
                 language: {
                     paginate: {
                         previous: "<i class='mdi mdi-chevron-left'>",
-                        next: "<i class='mdi mdi-chevron-right'>"
-                    }
+                        next: "<i class='mdi mdi-chevron-right'>",
+                    },
+                    infoFiltered: ""
                 },
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
@@ -308,7 +310,8 @@ include "header.php";
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,4,5,6,7,8,9]}
+                    {"className": "dt-center", "targets": [0,4,5,6,7,8,9,10]},
+                    {"visible": false, "targets": [9,11,12]}
                 ],
             });
             <?php if (!$detect->isMobile()) { ?>

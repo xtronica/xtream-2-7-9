@@ -2,7 +2,7 @@
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
 if (!$rPermissions["is_admin"]) { exit; }
-$rBouquets = getBouquets();
+
 include "header.php";
 ?>        <div class="wrapper">
             <div class="container-fluid">
@@ -14,15 +14,15 @@ include "header.php";
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
                                     <li>
-                                        <a href="bouquet.php">
+                                        <a href="group.php" style="margin-right:10px;">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
-                                                <i class="mdi mdi-plus"></i> Add Bouquet
+                                                <i class="mdi mdi-plus"></i> Add Group
                                             </button>
                                         </a>
                                     </li>
                                 </ol>
                             </div>
-                            <h4 class="page-title">Bouquets</h4>
+                            <h4 class="page-title">Groups</h4>
                         </div>
                     </div>
                 </div>     
@@ -36,29 +36,46 @@ include "header.php";
                                     <thead>
                                         <tr>
                                             <th class="text-center">ID</th>
-                                            <th>Bouquet Name</th>
-                                            <th class="text-center">Channels</th>
-                                            <th class="text-center">Series</th>
+                                            <th>Group Name</th>
+                                            <th class="text-center">Admin UI</th>
+                                            <th class="text-center">Reseller UI</th>
+                                            <th class="text-center">Ban Access</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($rBouquets as $rBouquet) { ?>
-                                        <tr id="bouquet-<?=$rBouquet["id"]?>">
-                                            <td class="text-center"><?=$rBouquet["id"]?></td>
-                                            <td><?=$rBouquet["bouquet_name"]?></td>
-                                            <td class="text-center"><?=count(json_decode($rBouquet["bouquet_channels"], True))?></td>
-                                            <td class="text-center"><?=count(json_decode($rBouquet["bouquet_series"], True))?></td>
+                                        <?php foreach (getMemberGroups() as $rGroup) { ?>
+                                        <tr id="group-<?=$rGroup["group_id"]?>">
+                                            <td class="text-center"><?=$rGroup["group_id"]?></td>
+                                            <td><?=$rGroup["group_name"]?></td>
                                             <td class="text-center">
-                                                <a href="./bouquet_order.php?id=<?=$rBouquet["id"]?>"><button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Reorder Bouquet" class="btn btn-outline-primary waves-effect waves-light btn-xs"><i class="mdi mdi-format-line-spacing"></i></button></a>
-                                                <a href="./bouquet.php?id=<?=$rBouquet["id"]?>"><button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Edit Bouquet" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
-                                                <button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Delete Bouquet" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api(<?=$rBouquet["id"]?>, 'delete');""><i class="mdi mdi-close"></i></button>
+                                                <div class="custom-control custom-checkbox mt-1">
+                                                    <input data-id="<?=$rGroup["group_id"]?>" data-name="is_admin" type="checkbox" class="custom-control-input" id="is_admin_<?=$rGroup["group_id"]?>" name="is_admin"<?php if ($rGroup["is_admin"]) { echo " checked"; } ?>>
+                                                    <label class="custom-control-label" for="is_admin_<?=$rGroup["group_id"]?>"></label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="custom-control custom-checkbox mt-1">
+                                                    <input data-id="<?=$rGroup["group_id"]?>" data-name="is_reseller" type="checkbox" class="custom-control-input" id="is_reseller_<?=$rGroup["group_id"]?>" name="is_reseller"<?php if ($rGroup["is_reseller"]) { echo " checked"; } ?>>
+                                                    <label class="custom-control-label" for="is_reseller_<?=$rGroup["group_id"]?>"></label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="custom-control custom-checkbox mt-1">
+                                                    <input data-id="<?=$rGroup["group_id"]?>" data-name="is_banned" type="checkbox" class="custom-control-input" id="is_banned_<?=$rGroup["group_id"]?>" name="is_banned"<?php if ($rGroup["is_banned"]) { echo " checked"; } ?>>
+                                                    <label class="custom-control-label" for="is_banned_<?=$rGroup["group_id"]?>"></label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="./group.php?id=<?=$rGroup["group_id"]?>"><button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Edit Group" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                                                <?php if ($rGroup["can_delete"]) { ?>
+                                                <button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Delete Group" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api(<?=$rGroup["group_id"]?>, 'delete');""><i class="mdi mdi-close"></i></button>
+                                                <?php } ?>
                                             </td>
                                         </tr>
                                         <?php } ?>
                                     </tbody>
                                 </table>
-
                             </div> <!-- end card body-->
                         </div> <!-- end card -->
                     </div><!-- end col-->
@@ -93,22 +110,21 @@ include "header.php";
         <script src="assets/libs/datatables/buttons.print.min.js"></script>
         <script src="assets/libs/datatables/dataTables.keyTable.min.js"></script>
         <script src="assets/libs/datatables/dataTables.select.min.js"></script>
-        <script src="assets/libs/pdfmake/pdfmake.min.js"></script>
-        <script src="assets/libs/pdfmake/vfs_fonts.js"></script>
+        
         <!-- third party js ends -->
 
         <script>
         function api(rID, rType) {
             if (rType == "delete") {
-                if (confirm('Are you sure you want to delete this bouquet? This cannot be undone!') == false) {
+                if (confirm('Are you sure you want to delete this group? This cannot be undone!') == false) {
                     return;
                 }
             }
-            $.getJSON("./api.php?action=bouquet&sub=" + rType + "&bouquet_id=" + rID, function(data) {
+            $.getJSON("./api.php?action=group&sub=" + rType + "&group_id=" + rID, function(data) {
                 if (data.result === true) {
                     if (rType == "delete") {
-                        $("#bouquet-" + rID).remove();
-                        $.toast("Bouquet successfully deleted.");
+                        $("#package-" + rID).remove();
+                        $.toast("Package successfully deleted.");
                     }
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
@@ -119,7 +135,11 @@ include "header.php";
                 }
             });
         }
-        
+        $('input:checkbox').change(function() {
+            $.getJSON("./api.php?action=group&sub=" + $(this).data("name") + "&group_id=" + $(this).data("id") + "&value=" + ($(this).is(":checked") ? 1 : 0), function(data) {
+                $.toast("Package has been modified.");
+            });
+        });
         $(document).ready(function() {
             $("#datatable").DataTable({
                 language: {
@@ -131,7 +151,9 @@ include "header.php";
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
                 },
-                responsive: false
+                responsive: false,
+                paging: false,
+                bInfo: false
             });
         });
         </script>

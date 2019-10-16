@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 include "header.php";
 ?>        <div class="wrapper">
             <div class="container-fluid">
@@ -12,20 +13,16 @@ include "header.php";
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
                                     <li>
-                                        <a href="javascript:location.reload();" style="margin-right:10px;">
+                                        <a href="javascript:location.reload();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> Refresh
                                             </button>
                                         </a>
-                                    </li>
-                                    <li>
-                                        <a href="server.php" style="margin-right:10px;">
+                                        <a href="server.php">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-plus"></i> Add Server
                                             </button>
                                         </a>
-                                    </li>
-                                    <li>
                                         <a href="install_server.php">
                                             <button type="button" class="btn btn-info waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-creation"></i> Install LB
@@ -50,10 +47,12 @@ include "header.php";
                                             <th class="text-center">ID</th>
                                             <th>Server Name</th>
                                             <th class="text-center">Status</th>
+                                            <th class="text-center">Latency</th>
                                             <th>Domain Name</th>
                                             <th>Server IP</th>
                                             <th class="text-center">Client Slots</th>
-                                            <th>Operating System</th>
+                                            <th class="text-center">CPU %</th>
+                                            <th class="text-center">MEM %</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -71,15 +70,21 @@ include "header.php";
                                         } else if ($rServer["status"] == 3) {
                                             $rServerText = "Installing...";
                                         }
+                                        $rWatchDog = json_decode($rServer["watchdog_data"], True);
+                                        if (!is_array($rWatchDog)) {
+                                            $rWatchDog = Array("total_mem_used_percent" => "N/A ", "cpu_avg" => "N/A ");
+                                        }
                                         ?>
                                         <tr id="server-<?=$rServer["id"]?>">
                                             <td class="text-center"><?=$rServer["id"]?></td>
                                             <td><?=$rServer["server_name"]?></td>
                                             <td class="text-center" data-toggle="tooltip" data-placement="top" title="" data-original-title="<?=$rServerText?>" ><i class="<?php if ($rServer["status"] == 1) { echo "btn-outline-success"; } else if ($rServer["status"] == "3") { echo "btn-outline-info"; } else { echo "btn-outline-danger"; } ?> mdi mdi-<?=Array(0 => "alarm-light-outline", 1 => "check-network", 2 => "alarm-light-outline", 3 => "creation")[$rServer["status"]]?>"></i></td>
+                                            <td class="text-center"><?=$rServer["latency"]?></td>
                                             <td><?=$rServer["domain_name"]?></td>
                                             <td><?=$rServer["server_ip"]?></td>
                                             <td class="text-center"><a href="./live_connections.php?server_id=<?=$rServer["id"]?>"><?=count(getConnections($rServer["id"]))?> / <?=$rServer["total_clients"]?></a></td>
-                                            <td><?=$rServer["system_os"]?></td>
+                                            <td class="text-center"><?=intval($rWatchDog["cpu_avg"])?>%</td>
+                                            <td class="text-center"><?=intval($rWatchDog["total_mem_used_percent"])?>%</td>
                                             <td class="text-center">
                                                 <a href="./server.php?id=<?=$rServer["id"]?>"><button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Edit Server" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
                                                 <button type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Kill All Connections" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api(<?=$rServer["id"]?>, 'kill');""><i class="fas fa-hammer"></i></button>
@@ -135,7 +140,7 @@ include "header.php";
                 if (confirm('Are you sure you want to delete this server and it\'s accompanying streams? This cannot be undone!') == false) {
                     return;
                 }
-            } else if (rType == "delete") {
+            } else if (rType == "kill") {
                 if (confirm('Are you sure you want to kill all connections to this server?') == false) {
                     return;
                 }

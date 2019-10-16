@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["reorder"])) {
     $rOrder = json_decode($_POST["stream_order_array"], True);
@@ -131,6 +132,9 @@ include "header.php"; ?>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0 add-margin-top-20">
+                                                    <li class="list-inline-item">
+                                                       <a href="javascript: void(0);" onClick="AtoZ('stream')" class="btn btn-info">Sort All A to Z</a>
+                                                    </li>
                                                     <li class="next list-inline-item float-right">
                                                         <button type="submit" class="btn btn-primary waves-effect waves-light">Save Changes</button>
                                                     </li>
@@ -159,6 +163,9 @@ include "header.php"; ?>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0 add-margin-top-20">
+                                                    <li class="list-inline-item">
+                                                       <a href="javascript: void(0);" onClick="AtoZ('movie')" class="btn btn-info">Sort All A to Z</a>
+                                                    </li>
                                                     <li class="next list-inline-item float-right">
                                                         <button type="submit" class="btn btn-primary waves-effect waves-light">Save Changes</button>
                                                     </li>
@@ -187,7 +194,10 @@ include "header.php"; ?>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0 add-margin-top-20">
-                                                    <li class="next list-inline-item float-right">
+                                                    <li class="list-inline-item">
+                                                       <a href="javascript: void(0);" onClick="AtoZ('series')" class="btn btn-info">Sort All A to Z</a>
+                                                    </li>
+                                                    <li class="list-inline-item float-right">
                                                         <button type="submit" class="btn btn-primary waves-effect waves-light">Save Changes</button>
                                                     </li>
                                                 </ul>
@@ -239,6 +249,14 @@ include "header.php"; ?>
         <script src="assets/js/app.min.js"></script>
         
         <script>
+        function AtoZ(rType) {
+            $.getJSON("./api.php?action=sort_bouquet&bouquet_id=<?=$rBouquet["id"]?>&type=" + rType, function(rData) {
+                if (rData.result === true) {
+                    location.reload();
+                }
+            });
+        }
+        
         $(document).ready(function() {
             $("#stream_order").nestable({maxDepth: 1});
             $("#stream_order_movie").nestable({maxDepth: 1});

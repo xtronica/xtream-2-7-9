@@ -1,38 +1,55 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
-if (!$rPermissions["is_admin"]) { exit; }
 
-if (isset($_POST["submit_server"])) {
-    $rArray = Array("server_name" => "", "domain_name" => "", "server_ip" => "", "vpn_ip" => "", "diff_time_main" => 0, "http_broadcast_port" => 25461, "total_clients" => 1000, "system_os" => "", "network_interface" => "eth0", "status" => 3, "enable_geoip" => 0, "can_delete" => 1, "rtmp_port" => 25462, "enable_isp" => 0, "boost_fpm" => 0, "network_guaranteed_speed" => 1000, "https_broadcast_port" => 25463, "whitelist_ips" => Array(), "timeshift_only" => 0);
-    if ((strlen($_POST["server_name"]) == 0) OR (strlen($_POST["server_ip"]) == 0) OR (strlen($_POST["ssh_port"]) == 0) OR (strlen($_POST["root_password"]) == 0)) {
+if (isset($_POST["submit_ticket"])) {
+    if (((strlen($_POST["title"]) == 0) && (!isset($_POST["respond"]))) OR ((strlen($_POST["message"]) == 0))) {
         $_STATUS = 1;
     }
     if (!isset($_STATUS)) {
-        $rArray["server_ip"] = $_POST["server_ip"];
-        $rArray["server_name"] = $_POST["server_name"];
-        $rCols = implode(',', array_keys($rArray));
-        foreach (array_values($rArray) as $rValue) {
-            isset($rValues) ? $rValues .= ',' : $rValues = '';
-            if (is_array($rValue)) {
-                $rValue = json_encode($rValue);
+        if (!isset($_POST["respond"])) {
+            $rArray = Array("member_id" => $rUserInfo["id"], "title" => $_POST["title"], "status" => 1, "admin_read" => 0, "user_read" => 1);
+            $rCols = "`".implode('`,`', array_keys($rArray))."`";
+            foreach (array_values($rArray) as $rValue) {
+                isset($rValues) ? $rValues .= ',' : $rValues = '';
+                if (is_array($rValue)) {
+                    $rValue = json_encode($rValue);
+                }
+                if (is_null($rValue)) {
+                    $rValues .= 'NULL';
+                } else {
+                    $rValues .= '\''.$db->real_escape_string($rValue).'\'';
+                }
             }
-            if (is_null($rValue)) {
-                $rValues .= 'NULL';
+            $rQuery = "INSERT INTO `tickets`(".$rCols.") VALUES(".$rValues.");";
+            if ($db->query($rQuery)) {
+                $rInsertID = $db->insert_id;
+                $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".$rInsertID.", 0, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                header("Location: ./ticket_view.php?id=".intval($rInsertID));
             } else {
-                $rValues .= '\''.$db->real_escape_string($rValue).'\'';
+                $_STATUS = 2;
             }
-        }
-        $rQuery = "INSERT INTO `streaming_servers`(".$rCols.") VALUES(".$rValues.");";
-        if ($db->query($rQuery)) {
-            $rServerID = intval($db->insert_id);
-            $rJSON = Array("status" => 0, "port" => intval($_POST["ssh_port"]), "host" => $_POST["server_ip"], "password" => $_POST["root_password"], "time" => intval(time()), "id" => $rServerID);
-            file_put_contents("/home/xtreamcodes/iptv_xtream_codes/adtools/balancer/".$rServerID.".json", json_encode($rJSON));
-            header("Location: ./servers.php");
         } else {
-            $_STATUS = 2;
+            $rTicket = getTicket($_POST["respond"]);
+            if ($rTicket) {
+                if (intval($rUserInfo["id"]) == intval($rTicket["member_id"])) {
+                    $db->query("UPDATE `tickets` SET `admin_read` = 0, `user_read` = 1 WHERE `id` = ".intval($_POST["respond"]).";");
+                    $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".intval($_POST["respond"]).", 0, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                } else {
+                    $db->query("UPDATE `tickets` SET `admin_read` = 0, `user_read` = 0 WHERE `id` = ".intval($_POST["respond"]).";");
+                    $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".intval($_POST["respond"]).", 1, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                }
+                header("Location: ./ticket_view.php?id=".intval($_POST["respond"]));
+            } else {
+                $_STATUS = 2;
+            }
         }
     }
+}
+
+if (isset($_GET["id"])) {
+    $rTicket = getTicket($_GET["id"]);
+    if (!$rTicket) { exit; }
 }
 
 include "header.php"; ?>
@@ -44,10 +61,18 @@ include "header.php"; ?>
                         <div class="page-title-box">
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
-                                    <a href="./servers.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Servers</li></a>
+                                    <?php if (isset($rTicket)) { ?>
+                                    <a href="./ticket_view.php?id=<?=$rTicket["id"]?>"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Ticket</li></a>
+                                    <?php } else { ?>
+                                    <a href="./tickets.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Tickets</li></a>
+                                    <?php } ?>
                                 </ol>
                             </div>
-                            <h4 class="page-title">Load Balancer Installation</h4>
+                            <?php if (isset($rTicket)) { ?>
+                            <h4 class="page-title">Ticket Response</h4>
+                            <?php } else { ?>
+                            <h4 class="page-title">Create Ticket</h4>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>     
@@ -64,47 +89,42 @@ include "header.php"; ?>
                         <?php } ?>
                         <div class="card">
                             <div class="card-body">
-                                <form action="./install_server.php" method="POST" id="server_form">
+                                <form action="./ticket.php" method="POST" id="ticket_form">
+                                    <?php if (isset($rTicket)) { ?>
+                                    <input type="hidden" name="respond" value="<?=$rTicket["id"]?>" />
+                                    <?php } ?>
                                     <div id="basicwizard">
                                         <ul class="nav nav-pills bg-light nav-justified form-wizard-header mb-4">
                                             <li class="nav-item">
-                                                <a href="#server-details" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
-                                                    <i class="mdi mdi-creation mr-1"></i>
+                                                <a href="#ticket-details" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
+                                                    <i class="mdi mdi-account-card-details-outline mr-1"></i>
                                                     <span class="d-none d-sm-inline">Details</span>
                                                 </a>
                                             </li>
                                         </ul>
                                         <div class="tab-content b-0 mb-0 pt-0">
-                                            <div class="tab-pane" id="server-details">
+                                            <div class="tab-pane" id="ticket-details">
                                                 <div class="row">
                                                     <div class="col-12">
+                                                        <?php if (!isset($rTicket)) { ?>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="server_name">Server Name</label>
+                                                            <label class="col-md-4 col-form-label" for="title">Subject</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="server_name" name="server_name" value="">
+                                                                <input type="text" class="form-control" id="title" name="title" value="">
                                                             </div>
                                                         </div>
+                                                        <?php } ?>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="server_ip">Server IP</label>
+                                                            <label class="col-md-4 col-form-label" for="message">Message</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="server_ip" name="server_ip" value="">
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="root_password">Root Password</label>
-                                                            <div class="col-md-4">
-                                                                <input type="text" class="form-control" id="root_password" name="root_password" value="">
-                                                            </div>
-                                                            <label class="col-md-2 col-form-label" for="ssh_port">SSH Port</label>
-                                                            <div class="col-md-2">
-                                                                <input type="text" class="form-control" id="ssh_port" name="ssh_port" value="22">
+                                                                <textarea id="message" name="message" class="form-control" rows="3" placeholder=""></textarea>
                                                             </div>
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="next list-inline-item float-right">
-                                                        <input name="submit_server" type="submit" class="btn btn-primary" value="Install Server" />
+                                                        <input name="submit_ticket" type="submit" class="btn btn-primary" value="Create" />
                                                     </li>
                                                 </ul>
                                             </div>
@@ -154,28 +174,13 @@ include "header.php"; ?>
         <script src="assets/js/app.min.js"></script>
         
         <script>
-        (function($) {
-          $.fn.inputFilter = function(inputFilter) {
-            return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
-              if (inputFilter(this.value)) {
-                this.oldValue = this.value;
-                this.oldSelectionStart = this.selectionStart;
-                this.oldSelectionEnd = this.selectionEnd;
-              } else if (this.hasOwnProperty("oldValue")) {
-                this.value = this.oldValue;
-                this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-              }
-            });
-          };
-        }(jQuery));
-        
         $(document).ready(function() {
             $(document).keypress(function(event){
                 if (event.which == '13') {
                     event.preventDefault();
                 }
             });
-            $("#ssh_port").inputFilter(function(value) { return /^\d*$/.test(value); });
+            
             $("form").attr('autocomplete', 'off');
         });
         </script>

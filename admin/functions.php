@@ -4,7 +4,6 @@ $rRelease = 1;
 session_start();
 set_time_limit(10);
 ini_set('default_socket_timeout', 10);
-
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
@@ -12,7 +11,7 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 define("MAIN_DIR", "/home/xtreamcodes/iptv_xtream_codes/");
 define("CONFIG_CRYPT_KEY", "5709650b0d7806074842c6de575025b1");
 
-include "./mobiledetect.php";
+include realpath(dirname(__FILE__))."/mobiledetect.php";
 $detect = new Mobile_Detect;
 
 $rStatusArray = Array(0 => "Stopped", 1 => "Running", 2 => "Starting", 3 => "<strong style='color:#cc9999'>DOWN</strong>", 4 => "On Demand", 5 => "Direct");
@@ -154,18 +153,33 @@ function getStreams($category_id=null, $full=false, $stream_ids=null) {
                     // Stopped
                     $rServerArray["actual_status"] = 0;
                 }
+				$rServerArray["current_source"] = $rStreamSys["current_source"];
                 $rServerArray["uptime_text"] = sprintf('%02dh %02dm %02ds', ($rServerArray["uptime"]/3600),($rServerArray["uptime"]/60%60), ($rServerArray["uptime"]%60));
                 $rServerArray["on_demand"] = $rStreamSys["on_demand"];
                 $rStreamInfo = json_decode($rStreamSys["stream_info"], True);
-                $rServerArray["stream_text"] = "Not Available";
+                $rServerArray["stream_text"] = "<div style='font-size: 12px; text-align: center;'>Not Available</div>";
                 if ($rServerArray["actual_status"] == 1) {
-                    if ((isset($rStreamInfo["codecs"]["video"])) && (isset($rStreamInfo["codecs"]["audio"]))) {
-                        $rServerArray["stream_text"] = sprintf("%s Kbps - %dx%d - %s - %s", number_format($rStreamSys["bitrate"], 0), $rStreamInfo["codecs"]["video"]["width"], $rStreamInfo["codecs"]["video"]["height"], $rStreamInfo["codecs"]["video"]["codec_name"], $rStreamInfo["codecs"]["audio"]["codec_name"]);
-                    } else if (isset($rStreamInfo["codecs"]["video"])) {
-                        $rServerArray["stream_text"] = sprintf("%s Kbps - %dx%d - %s - No Audio", number_format($rStreamSys["bitrate"], 0), $rStreamInfo["codecs"]["video"]["width"], $rStreamInfo["codecs"]["video"]["height"], $rStreamInfo["codecs"]["video"]["codec_name"]);
-                    } else if (isset($rStreamInfo["codecs"]["audio"])) {
-                        $rServerArray["stream_text"] = sprintf("%s Kbps - No Video - %s", number_format($rStreamSys["bitrate"], 0), $rStreamInfo["codecs"]["audio"]["codec_name"]);
+                    if (!isset($rStreamInfo["codecs"]["video"])) {
+                        $rStreamInfo["codecs"]["video"] = "N/A";
                     }
+                    if (!isset($rStreamInfo["codecs"]["audio"])) {
+                        $rStreamInfo["codecs"]["audio"] = "N/A";
+                    }
+                    if ($rStreamSys['bitrate'] == 0) { 
+                        $rStreamSys['bitrate'] = "?";
+                    }
+                    $rServerArray["stream_text"] = "<div style='font-size: 12px; text-align: center;'>
+                        <div class='row'>
+                            <div class='col'>".$rStreamSys['bitrate']." Kbps</div>
+                            <div class='col' style='color: #20a009;'><i class='mdi mdi-video' data-name='mdi-video'></i></div>
+                            <div class='col' style='color: #20a009;'><i class='mdi mdi-volume-high' data-name='mdi-volume-high'></i></div>
+                        </div>
+                        <div class='row'>
+                            <div class='col'>".$rStreamInfo["codecs"]["video"]["width"]." x ".$rStreamInfo["codecs"]["video"]["height"]."</div>
+                            <div class='col'>".$rStreamInfo["codecs"]["video"]["codec_name"]."</div>
+                            <div class='col'>".$rStreamInfo["codecs"]["audio"]["codec_name"]."</div>
+                        </div>
+                    </div>";
                 }
                 $return[$i]["servers"][] = $rServerArray;
             }
@@ -314,16 +328,58 @@ function getStreamSys($rID) {
     return $return;
 }
 
-function getRegisteredUsers() {
+function getRegisteredUsers($rOwner=null, $rIncludeSelf=true) {
     global $db;
     $return = Array();
-    $result = $db->query("SELECT * FROM `reg_users` ORDER BY `id` ASC;");
+    $result = $db->query("SELECT * FROM `reg_users` ORDER BY `username` ASC;");
     if (($result) && ($result->num_rows > 0)) {
         while ($row = $result->fetch_assoc()) {
-            $return[intval($row["id"])] = $row;
+            if ((!$rOwner) OR ($row["owner_id"] == $rOwner) OR (($row["id"] == $rOwner) && ($rIncludeSelf))) {
+                $return[intval($row["id"])] = $row;
+            }
         }
     }
+    if (count($return) == 0) { $return[-1] = Array(); }
     return $return;
+}
+
+function hasPermissions($rType, $rID) {
+    global $rUserInfo, $db;
+    if ($rType == "user") {
+        if (in_array(intval(getUser($rID)["member_id"]), array_keys(getRegisteredUsers($rUserInfo["id"])))) {
+            return true;
+        }
+    } else if ($rType == "pid") {
+        $result = $db->query("SELECT `user_id` FROM `user_activity_now` WHERE `pid` = ".intval($rID).";");
+        if (($result) && ($result->num_rows > 0)) {
+            if (in_array(intval(getUser($result->fetch_assoc()["user_id"])["member_id"]), array_keys(getRegisteredUsers($rUserInfo["id"])))) {
+                return true;
+            }
+        }
+    } else if ($rType == "reg_user") {
+        if ((in_array(intval($rID), array_keys(getRegisteredUsers($rUserInfo["id"])))) && (intval($rID) <> intval($rUserInfo["id"]))) {
+            return true;
+        }
+    } else if ($rType == "ticket") {
+        if (in_array(intval(getTicket($rID)["member_id"]), array_keys(getRegisteredUsers($rUserInfo["id"])))) {
+            return true;
+        }
+    } else if ($rType == "mag") {
+        $result = $db->query("SELECT `user_id` FROM `mag_devices` WHERE `mag_id` = ".intval($rID).";");
+        if (($result) && ($result->num_rows > 0)) {
+            if (in_array(intval(getUser($result->fetch_assoc()["user_id"])["member_id"]), array_keys(getRegisteredUsers($rUserInfo["id"])))) {
+                return true;
+            }
+        }
+    } else if ($rType == "e2") {
+        $result = $db->query("SELECT `user_id` FROM `enigma2_devices` WHERE `device_id` = ".intval($rID).";");
+        if (($result) && ($result->num_rows > 0)) {
+            if (in_array(intval(getUser($result->fetch_assoc()["user_id"])["member_id"]), array_keys(getRegisteredUsers($rUserInfo["id"])))) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function getMemberGroups() {
@@ -336,6 +392,15 @@ function getMemberGroups() {
         }
     }
     return $return;
+}
+
+function getMemberGroup($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `member_groups` WHERE `group_id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
 }
 
 function getRegisteredUsernames() {
@@ -385,6 +450,36 @@ function getBouquets() {
 function getBouquet($rID) {
     global $db;
     $result = $db->query("SELECT * FROM `bouquets` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
+}
+
+function getPackages() {
+    global $db;
+    $return = Array();
+    $result = $db->query("SELECT * FROM `packages` ORDER BY `id` ASC;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $return[intval($row["id"])] = $row;
+        }
+    }
+    return $return;
+}
+
+function getPackage($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `packages` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
+}
+
+function getTranscodeProfile($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `transcoding_profiles` WHERE `profile_id` = ".intval($rID).";");
     if (($result) && ($result->num_rows == 1)) {
         return $result->fetch_assoc();
     }
@@ -479,11 +574,85 @@ function getMAGUser($rID) {
 
 function getE2User($rID) {
     global $db;
-    $result = $db->query("SELECT `mac` FROM `enigma_devices` WHERE `user_id` = ".intval($rID).";");
+    $result = $db->query("SELECT `mac` FROM `enigma2_devices` WHERE `user_id` = ".intval($rID).";");
     if (($result) && ($result->num_rows == 1)) {
         return $result->fetch_assoc()["mac"];
     }
     return "";
+}
+
+function getTicket($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `tickets` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows > 0)) {
+        $row = $result->fetch_assoc();
+        $row["replies"] = Array();
+        $row["title"] = htmlspecialchars($row["title"]);
+        $result = $db->query("SELECT * FROM `tickets_replies` WHERE `ticket_id` = ".intval($rID)." ORDER BY `date` ASC;");
+        while ($reply = $result->fetch_assoc()) {
+            // Hack to fix display issues on short text.
+            $reply["message"] = htmlspecialchars($reply["message"]);
+            if (strlen($reply["message"]) < 80) {
+                $reply["message"] .= str_repeat("&nbsp; ", 80-strlen($reply["message"]));
+            }
+            $row["replies"][] = $reply;
+        }
+        $row["user"] = getRegisteredUser($row["member_id"]);
+        return $row;
+    }
+    return null;
+}
+
+function getTickets($rID=null) {
+    global $db;
+    $return = Array();
+    if ($rID) {
+        $result = $db->query("SELECT `tickets`.`id`, `tickets`.`member_id`, `tickets`.`title`, `tickets`.`status`, `tickets`.`admin_read`, `tickets`.`user_read`, `reg_users`.`username` FROM `tickets`, `reg_users` WHERE `member_id` = ".intval($rID)." AND `reg_users`.`id` = `tickets`.`member_id` ORDER BY `id` DESC;");
+    } else {
+        $result = $db->query("SELECT `tickets`.`id`, `tickets`.`member_id`, `tickets`.`title`, `tickets`.`status`, `tickets`.`admin_read`, `tickets`.`user_read`, `reg_users`.`username` FROM `tickets`, `reg_users` WHERE `reg_users`.`id` = `tickets`.`member_id` ORDER BY `id` DESC;");
+    }
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $dateresult = $db->query("SELECT MIN(`date`) AS `date` FROM `tickets_replies` WHERE `ticket_id` = ".intval($row["id"])." AND `admin_reply` = 0;");
+            if ($rDate = $dateresult->fetch_assoc()["date"]) {
+                $row["created"] = date("Y-m-d H:i", $rDate);
+            } else {
+                $row["created"] = "";
+            }
+            $dateresult = $db->query("SELECT MAX(`date`) AS `date` FROM `tickets_replies` WHERE `ticket_id` = ".intval($row["id"])." AND `admin_reply` = 1;");
+            if ($rDate = $dateresult->fetch_assoc()["date"]) {
+                $row["last_reply"] = date("Y-m-d H:i", $rDate);
+            } else {
+                $row["last_reply"] = "";
+            }
+            if ($row["status"] <> 0) {
+                if ($row["user_read"] == 0) {
+                    $row["status"] = 2;
+                }
+                if ($row["admin_read"] == 1) {
+                    $row["status"] = 3;
+                }
+            }
+            $return[] = $row;
+        }
+    }
+    return $return;
+}
+
+function checkTrials() {
+    global $db, $rPermissions, $rUserInfo;
+    $rTotal = $rPermissions["total_allowed_gen_trials"];
+    if ($rTotal > 0) {
+        $rTotalIn = $rPermissions["total_allowed_gen_in"];
+        if ($rTotalIn == "hours") {
+            $rTime = time() - (intval($rTotal) * 3600);
+        } else {
+            $rTime = time() - (intval($rTotal) * 3600 * 24);
+        }
+        $result = $db->query("SELECT COUNT(`id`) AS `count` FROM `users` WHERE `member_id` = ".intval($rUserInfo["id"])." AND `created_at` >= ".$rTime." AND `is_trial` = 1;");
+        return $result->fetch_assoc()["count"] < $rTotal;
+    }
+    return false;
 }
 
 function cryptPassword($password, $salt="xtreamcodes", $rounds=20000) {
@@ -505,18 +674,68 @@ function getIP(){
     return $ip;
 }
 
+function getPermissions($rID) {
+    global $db;
+    $result = $db->query("SELECT `*` FROM `member_groups` WHERE `group_id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
+}
+
 function doLogin($rUsername, $rPassword) {
     global $db;
-    $result = $db->query("SELECT `id`, `username`, `password` FROM `reg_users` WHERE `status` = 1 AND `member_group_id` = 1 AND `username` = '".$db->real_escape_string($rUsername)."' LIMIT 1;");
+    $result = $db->query("SELECT `id`, `username`, `password`, `member_group_id` FROM `reg_users` WHERE `username` = '".$db->real_escape_string($rUsername)."' LIMIT 1;");
     if (($result) && ($result->num_rows == 1)) {
         $rRow = $result->fetch_assoc();
         if (cryptPassword($rPassword) == $rRow["password"]) {
-            $db->query("UPDATE `reg_users` SET `last_login` = UNIX_TIMESTAMP(), `ip` = '".$db->real_escape_string(getIP())."' WHERE `id` = ".intval($rRow["id"]).";");
-            $_SESSION['user_id'] = $rRow["id"];
-            return True;
+            $rPermissions = getPermissions($rRow["member_group_id"]);
+            $rUserInfo = getRegisteredUser($rRow["id"]);
+            if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && ((!$rPermissions["is_banned"]) && ($rUserInfo["status"] == 1)))) {
+                $db->query("UPDATE `reg_users` SET `last_login` = UNIX_TIMESTAMP(), `ip` = '".$db->real_escape_string(getIP())."' WHERE `id` = ".intval($rRow["id"]).";");
+                $_SESSION['user_id'] = $rRow["id"];
+                $_SESSION['member_group_id'] = $rRow["member_group_id"];
+                return 1;
+            } else if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && ($rPermissions["is_banned"]))) {
+                return -1;
+            } else if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && (!$rUserInfo["status"]))) {
+                return -2;
+            }
         }
     }
-    return False;
+    return 0;
+}
+
+function getSubresellerSetups() {
+    global $db;
+    $return = Array();
+    $result = $db->query("SELECT * FROM `subreseller_setup` ORDER BY `id` ASC;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $return[intval($row["id"])] = $row;
+        }
+    }
+    return $return;
+}
+
+function getSubresellerSetup($rID) {
+    global $db;
+    $result = $db->query("SELECT * FROM `subreseller_setup` WHERE `id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
+}
+
+function checkTable($rTable) {
+    global $db;
+    $rTableQuery = Array(
+        "subreseller_setup" => "CREATE TABLE `subreseller_setup` (`id` int(11) NOT NULL AUTO_INCREMENT, `reseller` int(8) NOT NULL DEFAULT '0', `subreseller` int(8) NOT NULL DEFAULT '0', `status` int(1) NOT NULL DEFAULT '1', `dateadded` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;"
+    );
+    if ((!$db->query("DESCRIBE `".$rTable."`;")) && (isset($rTableQuery[$rTable]))) {
+        // Doesn't exist! Create it.
+        $db->query($rTableQuery[$rTable]);
+    }
 }
 
 function secondsToTime($inputSeconds) {
@@ -546,11 +765,17 @@ function writeAdminSettings() {
 
 function getFooter() {
     // Don't be a dick. Leave it.
-    global $rAdminSettings;
-    return "Copyright &copy; 2019 - <a href=\"https://xtream-ui.com\">Xtream UI</a> R".$rAdminSettings["version"]." - Free & Open Source Forever";
+    global $rAdminSettings, $rPermissions, $rSettings;
+    if ($rPermissions["is_admin"]) {
+        return "Copyright &copy; 2019 - <a href=\"https://xtream-ui.com\">Xtream UI</a> R".$rAdminSettings["version"]." - Free & Open Source Forever";
+    } else {
+        return $rSettings["copyrights_text"];
+    }
 }
 
 if (isset($_SESSION['user_id'])) {
+    $rUserInfo = getRegisteredUser($_SESSION['user_id']);
+    $rPermissions = getPermissions($_SESSION['member_group_id']);
     $rSettings = getSettings();
     $rCategories = getCategories();
     $rServers = getStreamingServers();

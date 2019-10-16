@@ -3,10 +3,14 @@ include "functions.php";
 if (isset($_SESSION['user_id'])) { header("Location: ./dashboard.php"); exit; }
 
 if ((isset($_POST["username"])) && (isset($_POST["password"]))) {
-    if (doLogin($_POST["username"], $_POST["password"])) {
-        header("Location: ./dashboard.php");
-    } else {
-        $_ERROR = 1;
+    $_STATUS = doLogin($_POST["username"], $_POST["password"]);
+    if ($_STATUS == 1) {
+        if (getPermissions($_SESSION['member_group_id'])["is_admin"]) {
+            header("Location: ./dashboard.php");
+        } else {
+            $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($_SESSION["user_id"]).", '', '', ".intval(time()).", '[<b>UserPanel</b> -> <u>Logged In</u>]');");
+            header("Location: ./reseller.php");
+        }
     }
 }
 ?>
@@ -30,10 +34,20 @@ if ((isset($_POST["username"])) && (isset($_POST["password"]))) {
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6 col-xl-5">
-                        <?php if (isset($_ERROR)) { ?>
+                        <?php if ((isset($_STATUS)) && ($_STATUS == 0)) { ?>
                         <div class="alert alert-danger alert-dismissible bg-danger text-white border-0 fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                             Incorrect username or password! Please try again.
+                        </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == -1)) { ?>
+                        <div class="alert alert-danger alert-dismissible bg-danger text-white border-0 fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            You have been banned from accessing this system.
+                        </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == -2)) { ?>
+                        <div class="alert alert-danger alert-dismissible bg-danger text-white border-0 fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            Your account has been disabled, you are no longer able to access the system.
                         </div>
                         <?php } ?>
                         <div class="card">

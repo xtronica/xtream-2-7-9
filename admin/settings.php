@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_settings"])) {
     $rArray = getSettings();
@@ -50,6 +51,8 @@ if (isset($_POST["submit_settings"])) {
         $_STATUS = 1;
     }
 }
+
+$rSettings = getSettings(); // Update
 
 include "header.php"; ?>
         <div class="wrapper boxed-layout">
@@ -159,6 +162,12 @@ include "header.php"; ?>
                                                             <label class="col-md-4 col-form-label" for="live_streaming_pass">Live Streaming Pass</label>
                                                             <div class="col-md-8">
                                                                 <input type="text" class="form-control" id="live_streaming_pass" name="live_streaming_pass" value="<?=$rSettings["live_streaming_pass"]?>">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="copyrights_text">Reseller Footer Copyright</label>
+                                                            <div class="col-md-8">
+                                                                <input type="text" class="form-control" id="copyrights_text" name="copyrights_text" value="<?=$rSettings["copyrights_text"]?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">
@@ -284,7 +293,27 @@ include "header.php"; ?>
                                             <div class="tab-pane" id="database">
                                                 <div class="row">
                                                     <div class="col-12">
-                                                        <p class="sub-header">
+                                                        <table class="table table-borderless mb-0">
+                                                            <thead class="thead-light">
+                                                                <tr>
+                                                                    <th class="text-center">Host</th>
+                                                                    <th class="text-center">Database</th>
+                                                                    <th class="text-center">Username</th>
+                                                                    <th class="text-center">Password</th>
+                                                                    <th class="text-center">Port</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <th class="text-center"><?=$_SERVER['SERVER_ADDR']?></th>
+                                                                    <td class="text-center"><?=$_INFO["db_name"]?></td>
+                                                                    <td class="text-center"><?=$_INFO["db_user"]?></td>
+                                                                    <td class="text-center"><?=$_INFO["db_pass"]?></td>
+                                                                    <td class="text-center"><?=$_INFO["db_port"]?></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                        <p class="sub-header" style="margin-top:30px;">
                                                             We have integrated a freeware PHP based MySQL editor into the system to allow you to manage your database manually. You can access it below.
                                                         </p>
                                                         <a href="./database.php"><button type="button" class="btn btn-info waves-effect waves-light btn-xl"><i class="mdi mdi-database-edit-btc"></i> Database Editor</button></a>

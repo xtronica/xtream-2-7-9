@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_category"])) {
     $rArray = Array("category_type" => "movie", "category_name" => "", "parent_id" => 0, "cat_order" => 99);
