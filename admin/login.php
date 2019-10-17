@@ -5,7 +5,7 @@ if (isset($_SESSION['user_id'])) { header("Location: ./dashboard.php"); exit; }
 if ((isset($_POST["username"])) && (isset($_POST["password"]))) {
     $_STATUS = doLogin($_POST["username"], $_POST["password"]);
     if ($_STATUS == 1) {
-        $rUserInfo = getUser($_SESSION["user_id"]);
+        $rUserInfo = getRegisteredUser($_SESSION["user_id"]);
         if (getPermissions($rUserInfo['member_group_id'])["is_admin"]) {
             header("Location: ./dashboard.php");
         } else {
