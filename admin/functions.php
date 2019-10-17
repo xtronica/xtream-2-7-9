@@ -505,15 +505,53 @@ function getIP(){
     return $ip;
 }
 
+<<<<<<< Updated upstream
+=======
+function getPermissions($rID) {
+    global $db;
+    $result = $db->query("SELECT `*` FROM `member_groups` WHERE `group_id` = ".intval($rID).";");
+    if (($result) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc();
+    }
+    return null;
+}
+
+>>>>>>> Stashed changes
 function doLogin($rUsername, $rPassword) {
     global $db;
     $result = $db->query("SELECT `id`, `username`, `password` FROM `reg_users` WHERE `status` = 1 AND `member_group_id` = 1 AND `username` = '".$db->real_escape_string($rUsername)."' LIMIT 1;");
     if (($result) && ($result->num_rows == 1)) {
         $rRow = $result->fetch_assoc();
         if (cryptPassword($rPassword) == $rRow["password"]) {
+<<<<<<< Updated upstream
             $db->query("UPDATE `reg_users` SET `last_login` = UNIX_TIMESTAMP(), `ip` = '".$db->real_escape_string(getIP())."' WHERE `id` = ".intval($rRow["id"]).";");
             $_SESSION['user_id'] = $rRow["id"];
             return True;
+=======
+            $rPermissions = getPermissions($rRow["member_group_id"]);
+            $rUserInfo = getRegisteredUser($rRow["id"]);
+            if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && ((!$rPermissions["is_banned"]) && ($rUserInfo["status"] == 1)))) {
+                $db->query("UPDATE `reg_users` SET `last_login` = UNIX_TIMESTAMP(), `ip` = '".$db->real_escape_string(getIP())."' WHERE `id` = ".intval($rRow["id"]).";");
+                $_SESSION['user_id'] = $rRow["id"];
+                return 1;
+            } else if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && ($rPermissions["is_banned"]))) {
+                return -1;
+            } else if (($rPermissions) && ((($rPermissions["is_admin"]) OR ($rPermissions["is_reseller"])) && (!$rUserInfo["status"]))) {
+                return -2;
+            }
+        }
+    }
+    return 0;
+}
+
+function getSubresellerSetups() {
+    global $db;
+    $return = Array();
+    $result = $db->query("SELECT * FROM `subreseller_setup` ORDER BY `id` ASC;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $return[intval($row["id"])] = $row;
+>>>>>>> Stashed changes
         }
     }
     return False;
@@ -551,7 +589,16 @@ function getFooter() {
 }
 
 if (isset($_SESSION['user_id'])) {
+<<<<<<< Updated upstream
+=======
+    $rUserInfo = getRegisteredUser($_SESSION['user_id']);
+    $rPermissions = getPermissions($rUserInfo['member_group_id']);
+    if ($rPermissions["is_admin"]) {
+        $rPermissions["is_reseller"] = 0; // Don't allow Admin & Reseller!
+    }
+>>>>>>> Stashed changes
     $rSettings = getSettings();
+    $rSettings["sidebar"] = $rAdminSettings["sidebar"];
     $rCategories = getCategories();
     $rServers = getStreamingServers();
     $rServerError = False;

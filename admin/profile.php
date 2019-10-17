@@ -1,9 +1,10 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
-if (isset($_POST["submit_epg"])) {
-    $rArray = Array("epg_name" => "", "epg_file" => "", "days_keep" => 7, "data" => "");
+if (isset($_POST["submit_profile"])) {
+    $rArray = Array("profile_name" => "", "profile_options" => "");
     foreach($_POST as $rKey => $rValue) {
         if (isset($rArray[$rKey])) {
             $rArray[$rKey] = $rValue;
@@ -22,10 +23,10 @@ if (isset($_POST["submit_epg"])) {
         }
     }
     if (isset($_POST["edit"])) {
-        $rCols = "id,".$rCols;
+        $rCols = "profile_id,".$rCols;
         $rValues = $_POST["edit"].",".$rValues;
     }
-    $rQuery = "REPLACE INTO `epg`(".$rCols.") VALUES(".$rValues.");";
+    $rQuery = "REPLACE INTO `transcoding_profiles`(".$rCols.") VALUES(".$rValues.");";
     if ($db->query($rQuery)) {
         if (isset($_POST["edit"])) {
             $rInsertID = intval($_POST["edit"]);
@@ -34,15 +35,15 @@ if (isset($_POST["submit_epg"])) {
         }
     }
     if (isset($rInsertID)) {
-        header("Location: ./epgs.php");exit;
+        header("Location: ./profiles.php");exit;
     } else {
         $_STATUS = 1;
     }
 }
 
 if (isset($_GET["id"])) {
-    $rEPGArr = getEPG($_GET["id"]);
-    if (!$rEPGArr) {
+    $rProfileArr = getTranscodeProfile($_GET["id"]);
+    if (!$rProfileArr) {
         exit;
     }
 }
@@ -63,10 +64,10 @@ if ($rSettings["sidebar"]) {
                         <div class="page-title-box">
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
-                                    <a href="./epgs.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to EPG's</li></a>
+                                    <a href="./profiles.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Profiles</li></a>
                                 </ol>
                             </div>
-                            <h4 class="page-title"><?php if (isset($rEPGArr)) { echo "Edit"; } else { echo "Add"; } ?> EPG</h4>
+                            <h4 class="page-title"><?php if (isset($rProfileArr)) { echo "Edit"; } else { echo "Add"; } ?> Profile</h4>
                         </div>
                     </div>
                 </div>     
@@ -78,7 +79,7 @@ if ($rSettings["sidebar"]) {
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            EPG operation was completed successfully.
+                            Profile operation was completed successfully.
                         </div>
                         <?php } else if ((isset($_STATUS)) && ($_STATUS > 0)) { ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -90,9 +91,9 @@ if ($rSettings["sidebar"]) {
                         <?php } ?>
                         <div class="card">
                             <div class="card-body">
-                                <form action="./epg.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="category_form">
-                                    <?php if (isset($rEPGArr)) { ?>
-                                    <input type="hidden" name="edit" value="<?=$rEPGArr["id"]?>" />
+                                <form action="./profile.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="profile_form">
+                                    <?php if (isset($rProfileArr)) { ?>
+                                    <input type="hidden" name="edit" value="<?=$rProfileArr["profile_id"]?>" />
                                     <?php } ?>
                                     <div id="basicwizard">
                                         <ul class="nav nav-pills bg-light nav-justified form-wizard-header mb-4">
@@ -102,72 +103,30 @@ if ($rSettings["sidebar"]) {
                                                     <span class="d-none d-sm-inline">Details</span>
                                                 </a>
                                             </li>
-                                            <?php if (isset($rEPGArr)) { ?>
-                                            <li class="nav-item">
-                                                <a href="#view-channels" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
-                                                    <i class="mdi mdi-play mr-1"></i>
-                                                    <span class="d-none d-sm-inline">View Channels</span>
-                                                </a>
-                                            </li>
-                                            <?php } ?>
                                         </ul>
                                         <div class="tab-content b-0 mb-0 pt-0">
                                             <div class="tab-pane" id="category-details">
                                                 <div class="row">
                                                     <div class="col-12">
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="epg_name">EPG Name</label>
+                                                            <label class="col-md-4 col-form-label" for="profile_name">Profile Name</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="epg_name" name="epg_name" value="<?php if (isset($rEPGArr)) { echo $rEPGArr["epg_name"]; } ?>">
+                                                                <input type="text" class="form-control" id="profile_name" name="profile_name" value="<?php if (isset($rProfileArr)) { echo $rProfileArr["profile_name"]; } ?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="epg_file">Source</label>
+                                                            <label class="col-md-4 col-form-label" for="profile_options">Profile Options</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="epg_file" name="epg_file" value="<?php if (isset($rEPGArr)) { echo $rEPGArr["epg_file"]; } ?>">
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="days_keep">Days to Keep</label>
-                                                            <div class="col-md-2">
-                                                                <input type="text" class="form-control" id="days_keep" name="days_keep" value="<?php if (isset($rEPGArr)) { echo $rEPGArr["days_keep"]; } else { echo "7"; } ?>">
+                                                                <textarea class="form-control" id="profile_options" name="profile_options"><?php if (isset($rProfileArr)) { echo $rProfileArr["profile_options"]; } ?></textarea>
                                                             </div>
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="next list-inline-item float-right">
-                                                        <input name="submit_epg" type="submit" class="btn btn-primary" value="<?php if (isset($rEPGArr)) { echo "Edit"; } else { echo "Add"; } ?>" />
+                                                        <input name="submit_profile" type="submit" class="btn btn-primary" value="<?php if (isset($rProfileArr)) { echo "Edit"; } else { echo "Add"; } ?>" />
                                                     </li>
                                                 </ul>
-                                            </div>
-                                            <div class="tab-pane" id="view-channels">
-                                                <div class="row">
-                                                    <div class="col-12" style="overflow-x:auto;">
-                                                        <table id="datatable" class="table dt-responsive nowrap">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Key</th>
-                                                                    <th>Channel Name</th>
-                                                                    <th>Languages</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <?php $rEPGData = Array();
-                                                                if (isset($rEPGArr["data"])) {
-                                                                    $rEPGData = json_decode($rEPGArr["data"], True);
-                                                                }
-                                                                foreach ($rEPGData as $rEPGKey => $rEPGRow) { ?>
-                                                                <tr>    
-                                                                    <td><?=$rEPGKey?></td>
-                                                                    <td><?=$rEPGRow["display_name"]?></td>
-                                                                    <td><?=join(", ", $rEPGRow["langs"])?></td>
-                                                                </tr>
-                                                                <?php } ?>
-                                                            </tbody>
-                                                        </table>
-                                                    </div> <!-- end col -->
-                                                </div> <!-- end row -->
                                             </div>
                                         </div> <!-- tab-content -->
                                     </div> <!-- end #basicwizard-->
@@ -223,21 +182,6 @@ if ($rSettings["sidebar"]) {
         <script src="assets/js/pages/form-wizard.init.js"></script>
         
         <script>
-        (function($) {
-          $.fn.inputFilter = function(inputFilter) {
-            return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
-              if (inputFilter(this.value)) {
-                this.oldValue = this.value;
-                this.oldSelectionStart = this.selectionStart;
-                this.oldSelectionEnd = this.selectionEnd;
-              } else if (this.hasOwnProperty("oldValue")) {
-                this.value = this.oldValue;
-                this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-              }
-            });
-          };
-        }(jQuery));
-        
         $(document).ready(function() {
             $(document).keypress(function(event){
                 if (event.which == '13') {
@@ -245,22 +189,6 @@ if ($rSettings["sidebar"]) {
                 }
             });
             $("form").attr('autocomplete', 'off');
-            $("#datatable").DataTable({
-                language: {
-                    paginate: {
-                        previous: "<i class='mdi mdi-chevron-left'>",
-                        next: "<i class='mdi mdi-chevron-right'>"
-                    }
-                },
-                drawCallback: function() {
-                    $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
-                    $('[data-toggle="tooltip"]').tooltip();
-                },
-                responsive: false,
-                bAutoWidth: false,
-                bInfo: false
-            });
-            $("#days_keep").inputFilter(function(value) { return /^\d*$/.test(value); });
         });
         </script>
         

@@ -171,6 +171,54 @@ if (isset($_GET["action"])) {
         } else {
             echo json_encode(Array("result" => False));exit;
         }
+<<<<<<< Updated upstream
+=======
+    } else if ($_GET["action"] == "get_package") {
+        $rReturn = Array();
+        $rResult = $db->query("SELECT `bouquets`, `official_credits` AS `cost_credits`, `official_duration`, `official_duration_in`, `max_connections`, `can_gen_mag`, `can_gen_e2`, `only_mag`, `only_e2` FROM `packages` WHERE `id` = ".intval($_GET["package_id"]).";");
+        if (($rResult) && ($rResult->num_rows == 1)) {
+            $rData = $rResult->fetch_assoc();
+            $rData["exp_date"] = date('Y-m-d', strtotime('+'.intval($rData["official_duration"]).' '.$rData["official_duration_in"]));
+            if (isset($_GET["user_id"])) {
+                if ($rUser = getUser($_GET["user_id"])) {
+                    if(time() < $rUser["exp_date"]) {
+                        $rData["exp_date"] = date('Y-m-d', strtotime('+'.intval($rData["official_duration"]).' '.$rData["official_duration_in"], $rUser["exp_date"]));
+                    } else {
+                        $rData["exp_date"] = date('Y-m-d', strtotime('+'.intval($rData["official_duration"]).' '.$rData["official_duration_in"]));
+                    }
+                }
+            }
+            foreach (json_decode($rData["bouquets"], True) as $rBouquet) {
+                $rResult = $db->query("SELECT * FROM `bouquets` WHERE `id` = ".intval($rBouquet).";");
+                if (($rResult) && ($rResult->num_rows == 1)) {
+                    $rRow = $rResult->fetch_assoc();
+                    $rReturn[] = Array("id" => $rRow["id"], "bouquet_name" => $rRow["bouquet_name"], "bouquet_channels" => json_decode($rRow["bouquet_channels"], True), "bouquet_series" => json_decode($rRow["bouquet_series"], True));
+                }
+            }
+            echo json_encode(Array("result" => True, "bouquets" => $rReturn, "data" => $rData));
+        } else {
+            echo json_encode(Array("result" => False));
+        }
+        exit;
+    } else if ($_GET["action"] == "get_package_trial") {
+        $rReturn = Array();
+        $rResult = $db->query("SELECT `bouquets`, `trial_credits` AS `cost_credits`, `trial_duration`, `trial_duration_in`, `max_connections`, `can_gen_mag`, `can_gen_e2`, `only_mag`, `only_e2` FROM `packages` WHERE `id` = ".intval($_GET["package_id"]).";");
+        if (($rResult) && ($rResult->num_rows == 1)) {
+            $rData = $rResult->fetch_assoc();
+            $rData["exp_date"] = date('Y-m-d', strtotime('+'.intval($rData["trial_duration"]).' '.$rData["trial_duration_in"]));
+            foreach (json_decode($rData["bouquets"], True) as $rBouquet) {
+                $rResult = $db->query("SELECT * FROM `bouquets` WHERE `id` = ".intval($rBouquet).";");
+                if (($rResult) && ($rResult->num_rows == 1)) {
+                    $rRow = $rResult->fetch_assoc();
+                    $rReturn[] = Array("id" => $rRow["id"], "bouquet_name" => $rRow["bouquet_name"], "bouquet_channels" => json_decode($rRow["bouquet_channels"], True), "bouquet_series" => json_decode($rRow["bouquet_series"], True));
+                }
+            }
+            echo json_encode(Array("result" => True, "bouquets" => $rReturn, "data" => $rData));
+        } else {
+            echo json_encode(Array("result" => False));
+        }
+        exit;
+>>>>>>> Stashed changes
     } else if ($_GET["action"] == "streams") {
         $rData = [];
         $rStreamIDs = json_decode($_GET["stream_ids"], True);

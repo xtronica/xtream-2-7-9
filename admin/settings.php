@@ -18,6 +18,12 @@ if (isset($_POST["submit_settings"])) {
     } else {
         $rAdminSettings["auto_update"] = false;
     }
+    if (isset($_POST["sidebar"])) {
+        $rAdminSettings["sidebar"] = true;
+        unset($_POST["sidebar"]);
+    } else {
+        $rAdminSettings["sidebar"] = false;
+    }
     if (isset($_POST["admin_username"])) {
         $rAdminSettings["admin_username"] = $_POST["admin_username"];
         unset($_POST["admin_username"]);
@@ -51,10 +57,27 @@ if (isset($_POST["submit_settings"])) {
     }
 }
 
+<<<<<<< Updated upstream
 include "header.php"; ?>
         <div class="wrapper boxed-layout">
             <form action="./settings.php" method="POST" id="category_form">
                 <div class="container-fluid">
+=======
+$rSettings = getSettings(); // Update
+$rSettings["sidebar"] = $rAdminSettings["sidebar"];
+
+if ($rSettings["sidebar"]) {
+    include "header_sidebar.php";
+} else {
+    include "header.php";
+}
+        if ($rSettings["sidebar"]) { ?>
+        <div class="content-page"><div class="content boxed-layout"><div class="container-fluid">
+        <?php } else { ?>
+        <div class="wrapper boxed-layout"><div class="container-fluid">
+        <?php } ?>
+                <form action="./settings.php" method="POST" id="category_form">
+>>>>>>> Stashed changes
                     <!-- start page title -->
                     <div class="row">
                         <div class="col-12">
@@ -174,6 +197,10 @@ include "header.php"; ?>
                                                             <label class="col-md-4 col-form-label" for="auto_update">Auto Update</label>
                                                             <div class="col-md-2">
                                                                 <input name="auto_update" id="auto_update" type="checkbox"<?php if ($rAdminSettings["auto_update"] == 1) { echo "checked "; } ?>data-plugin="switchery" class="js-switch" data-color="#039cfd"/>
+                                                            </div>
+                                                            <label class="col-md-4 col-form-label" for="sidebar">Sidebar Navigation</label>
+                                                            <div class="col-md-2">
+                                                                <input name="sidebar" id="sidebar" type="checkbox"<?php if ($rAdminSettings["sidebar"] == 1) { echo "checked "; } ?>data-plugin="switchery" class="js-switch" data-color="#039cfd"/>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -297,11 +324,11 @@ include "header.php"; ?>
                             </div> <!-- end card-->
                         </div> <!-- end col -->
                     </div>
-                </div> <!-- end container -->
-            </form>
+                </form>
+            </div> <!-- end container -->
         </div>
         <!-- end wrapper -->
-
+        <?php if ($rSettings["sidebar"]) { echo "</div>"; } ?>
         <!-- Footer Start -->
         <footer class="footer">
             <div class="container-fluid">

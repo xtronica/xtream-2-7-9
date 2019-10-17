@@ -57,6 +57,18 @@
                             </a>
                         </li>
                         <?php } ?>
+<<<<<<< Updated upstream
+=======
+                        <?php if ($rPermissions["is_reseller"]) { ?>
+                        <li class="notification-list">
+                            <a class="nav-link text-white waves-effect" href="#" role="button">
+                                <i class="mdi mdi-coins noti-icon"></i>
+                                <?=number_format($rUserInfo["credits"], 2)?>
+                            </a>
+                        </li>
+                        <?php } ?>
+                        <?php if ($rPermissions["is_admin"] == 1) { ?>
+>>>>>>> Stashed changes
                         <li class="notification-list">
                             <a href="./settings.php" class="nav-link right-bar-toggle waves-effect text-white">
                                 <i class="fe-settings noti-icon"></i>
@@ -92,7 +104,19 @@
                         <ul class="navigation-menu">
 
                             <li>
+<<<<<<< Updated upstream
                                 <a href="./dashboard.php"><i class="la la-dashboard"></i>Dashboard</a>
+=======
+                                <a href="./<?php if ($rPermissions["is_admin"]) { ?>dashboard.php<?php } else { ?>reseller.php<?php } ?>"><i class="la la-dashboard"></i>Dashboard</a>
+                            </li>
+                            <?php if (($rPermissions["is_reseller"]) && ($rPermissions["reseller_client_connection_logs"])) { ?>
+                            <li class="has-submenu">
+                                <a href="#"><i class="la la-exchange"></i>Connections <div class="arrow-down"></div></a>
+                                <ul class="submenu">
+                                    <li><a href="./live_connections.php">Live Connections</a></li>
+                                    <li><a href="./user_activity.php">Activity Logs</a></li>
+                                </ul>
+>>>>>>> Stashed changes
                             </li>
 
                             <li class="has-submenu">
@@ -128,8 +152,13 @@
                                     <li><a href="./mags.php">Manage MAG Devices</a></li>
                                     <li><a href="./mag_events.php">Manage MAG Events</a></li>
                                     <li class="separator"></li>
+<<<<<<< Updated upstream
                                     <li><a href="./user.php?e2">Add Enigma User</a></li>
                                     <li><a href="./enigma.php">Link MAG User</a></li>
+=======
+                                    <li><a href="./user<?php if ($rPermissions["is_reseller"]) { echo "_reseller"; } ?>.php?e2">Add Enigma User</a></li>
+                                    <li><a href="./enigma.php">Link Enigma User</a></li>
+>>>>>>> Stashed changes
                                     <li><a href="./enigmas.php">Manage Enigma Devices</a></li>
                                 </ul>
                             </li>
@@ -168,7 +197,12 @@
                                     <li><a href="./bouquets.php">Manage Bouquets</a></li>
                                 </ul>
                             </li>
+<<<<<<< Updated upstream
                             
+=======
+                            <?php }
+                            if ($rPermissions["is_reseller"]) { ?>
+>>>>>>> Stashed changes
                             <li class="has-submenu">
                                 <a href="#"> <i class="mdi mdi-television-guide"></i>EPG <div class="arrow-down"></div></a>
                                 <ul class="submenu">

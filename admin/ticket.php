@@ -2,24 +2,14 @@
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
 
-if (isset($_GET["id"])) {
-    $rEditID = $_GET["id"];
-}
-
-if (isset($_POST["submit_e2"])) {
-    if (filter_var($_POST["mac"], FILTER_VALIDATE_MAC)) {
-        if ($rArray = getUser($_POST["paired_user"])) {
-            if (isset($_POST["edit"])) {
-                $rCurE2 = getEnigma($_POST["edit"]);
-                $db->query("DELETE FROM `users` WHERE `id` = ".intval($rCurE2["user_id"]).";"); // Delete existing user.
-                $db->query("DELETE FROM `user_output` WHERE `user_id` = ".intval($rCurE2["user_id"]).";");
-            }
-            $rArray["username"] .= rand(0,999999);
-            $rArray["is_e2"] = 1;
-            $rArray["pair_id"] = $rArray["id"];
-            unset($rArray["id"]);
-            // Create new user.
-            $rCols = implode(',', array_keys($rArray));
+if (isset($_POST["submit_ticket"])) {
+    if (((strlen($_POST["title"]) == 0) && (!isset($_POST["respond"]))) OR ((strlen($_POST["message"]) == 0))) {
+        $_STATUS = 1;
+    }
+    if (!isset($_STATUS)) {
+        if (!isset($_POST["respond"])) {
+            $rArray = Array("member_id" => $rUserInfo["id"], "title" => $_POST["title"], "status" => 1, "admin_read" => 0, "user_read" => 1);
+            $rCols = "`".implode('`,`', array_keys($rArray))."`";
             foreach (array_values($rArray) as $rValue) {
                 isset($rValues) ? $rValues .= ',' : $rValues = '';
                 if (is_array($rValue)) {
@@ -31,43 +21,35 @@ if (isset($_POST["submit_e2"])) {
                     $rValues .= '\''.$db->real_escape_string($rValue).'\'';
                 }
             }
-            $rQuery = "INSERT INTO `users`(".$rCols.") VALUES(".$rValues.");";
+            $rQuery = "INSERT INTO `tickets`(".$rCols.") VALUES(".$rValues.");";
             if ($db->query($rQuery)) {
-                $rNewID = $db->insert_id;
-                $rArray = Array("user_id" => $rNewID, "mac" => $_POST["mac"]);
-                // Create / Edit Enigma.
-                if (isset($_POST["edit"])) {
-                    $db->query("UPDATE `enigma2_devices` SET `user_id` = ".intval($rNewID).", `mac` = '".$db->real_escape_string($_POST["mac"])."' WHERE `device_id` = ".intval($_POST["edit"]).";");
-                    $rEditID = $_POST["edit"];
-                } else {
-                    $db->query("INSERT INTO `enigma2_devices`(`user_id`, `mac`) VALUES(".intval($rNewID).", '".$db->real_escape_string($_POST["mac"])."');");
-                    $rEditID = $db->insert_id;
-                }
-                $db->query("INSERT INTO `user_output`(`user_id`, `access_output_id`) VALUES(".intval($rNewID).", 2);");
-                $_STATUS = 0;
+                $rInsertID = $db->insert_id;
+                $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".$rInsertID.", 0, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                header("Location: ./ticket_view.php?id=".intval($rInsertID));
+            } else {
+                $_STATUS = 2;
             }
-        } else if ((isset($_POST["edit"])) && (strlen($_POST["edit"]))) {
-            // Don't create a new user, legacy support for device.
-            $db->query("UPDATE `enigma2_devices` SET `mac` = '".$db->real_escape_string($_POST["mac"])."' WHERE `device_id` = ".intval($_POST["edit"]).";");
-            $rEditID = $_POST["edit"];
-            $_STATUS = 0;
+        } else {
+            $rTicket = getTicket($_POST["respond"]);
+            if ($rTicket) {
+                if (intval($rUserInfo["id"]) == intval($rTicket["member_id"])) {
+                    $db->query("UPDATE `tickets` SET `admin_read` = 0, `user_read` = 1 WHERE `id` = ".intval($_POST["respond"]).";");
+                    $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".intval($_POST["respond"]).", 0, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                } else {
+                    $db->query("UPDATE `tickets` SET `admin_read` = 0, `user_read` = 0 WHERE `id` = ".intval($_POST["respond"]).";");
+                    $db->query("INSERT INTO `tickets_replies`(`ticket_id`, `admin_reply`, `message`, `date`) VALUES(".intval($_POST["respond"]).", 1, '".$db->real_escape_string($_POST["message"])."', ".time().");");
+                }
+                header("Location: ./ticket_view.php?id=".intval($_POST["respond"]));
+            } else {
+                $_STATUS = 2;
+            }
         }
-    } else {
-        $rE2Arr = Array("mac" => $_POST["mac"], "paired_user" => $_POST["paired_user"]);
-        $_STATUS = 1;
     }
 }
 
-if ((isset($rE2Arr["paired_user"])) && (!isset($rE2Arr["username"]))) {
-    // Edit failed, get username.
-    $rE2Arr["username"] = getUser($rE2Arr["paired_user"])["username"];
-}
-
-if ((isset($rEditID)) && (!isset($rE2Arr))) {
-    $rE2Arr = getEnigma($rEditID);
-    if (!$rE2Arr) {
-        exit;
-    }
+if (isset($_GET["id"])) {
+    $rTicket = getTicket($_GET["id"]);
+    if (!$rTicket) { exit; }
 }
 
 if ($rSettings["sidebar"]) {
@@ -86,74 +68,70 @@ if ($rSettings["sidebar"]) {
                         <div class="page-title-box">
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
-                                    <a href="./enigmas.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Enigma Devices</li></a>
+                                    <?php if (isset($rTicket)) { ?>
+                                    <a href="./ticket_view.php?id=<?=$rTicket["id"]?>"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Ticket</li></a>
+                                    <?php } else { ?>
+                                    <a href="./tickets.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Tickets</li></a>
+                                    <?php } ?>
                                 </ol>
                             </div>
-                            <h4 class="page-title">Link Enigma User</h4>
+                            <?php if (isset($rTicket)) { ?>
+                            <h4 class="page-title">Ticket Response</h4>
+                            <?php } else { ?>
+                            <h4 class="page-title">Create Ticket</h4>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>     
                 <!-- end page title --> 
                 <div class="row">
                     <div class="col-xl-12">
-                        <?php if ((isset($_STATUS)) && ($_STATUS == 0)) { ?>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                            Device operation was completed successfully.
-                        </div>
-                        <?php } else if ((isset($_STATUS)) && ($_STATUS > 0)) { ?>
+                        <?php if ((isset($_STATUS)) && ($_STATUS > 0)) { ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            Please check the entered details, they appear to be invalid.
+                            There was an error performing this operation! Please check the form entry and try again.
                         </div>
                         <?php } ?>
                         <div class="card">
                             <div class="card-body">
-                                <form action="./enigma.php<?php if (isset($rEditID)) { echo "?id=".$rEditID; } ?>" method="POST" id="server_form">
-                                    <?php if (isset($rE2Arr)) { ?>
-                                    <input type="hidden" name="edit" value="<?=$rEditID?>" />
+                                <form action="./ticket.php" method="POST" id="ticket_form">
+                                    <?php if (isset($rTicket)) { ?>
+                                    <input type="hidden" name="respond" value="<?=$rTicket["id"]?>" />
                                     <?php } ?>
                                     <div id="basicwizard">
                                         <ul class="nav nav-pills bg-light nav-justified form-wizard-header mb-4">
                                             <li class="nav-item">
-                                                <a href="#enigma-details" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
+                                                <a href="#ticket-details" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2"> 
                                                     <i class="mdi mdi-account-card-details-outline mr-1"></i>
                                                     <span class="d-none d-sm-inline">Details</span>
                                                 </a>
                                             </li>
                                         </ul>
                                         <div class="tab-content b-0 mb-0 pt-0">
-                                            <div class="tab-pane" id="enigma-details">
+                                            <div class="tab-pane" id="ticket-details">
                                                 <div class="row">
                                                     <div class="col-12">
-                                                        <p class="sub-header">
-                                                            In order to attach an Enigma device, please create a normal user in the database and attach it below. The device and user will then be linked.
-                                                        </p>
+                                                        <?php if (!isset($rTicket)) { ?>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="mac">MAC Address</label>
+                                                            <label class="col-md-4 col-form-label" for="title">Subject</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="mac" name="mac" value="<?php if (isset($rE2Arr)) { echo $rE2Arr["mac"]; } ?>">
+                                                                <input type="text" class="form-control" id="title" name="title" value="">
                                                             </div>
                                                         </div>
+                                                        <?php } ?>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="paired_user">Paired User</label>
+                                                            <label class="col-md-4 col-form-label" for="message">Message</label>
                                                             <div class="col-md-8">
-                                                                <select id="paired_user" name="paired_user" class="form-control" data-toggle="select2">
-                                                                    <?php if (isset($rE2Arr)) { ?>
-                                                                    <option value="<?=$rE2Arr["paired_user"]?>" selected="selected"><?=$rE2Arr["username"]?></option>
-                                                                    <?php } ?>
-                                                                </select>
+                                                                <textarea id="message" name="message" class="form-control" rows="3" placeholder=""></textarea>
                                                             </div>
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="next list-inline-item float-right">
-                                                        <input name="submit_e2" type="submit" class="btn btn-primary" value="<?php if (isset($rE2Arr)) { echo "Edit"; } else { echo "Add"; } ?>" />
+                                                        <input name="submit_ticket" type="submit" class="btn btn-primary" value="Create" />
                                                     </li>
                                                 </ul>
                                             </div>
@@ -204,32 +182,6 @@ if ($rSettings["sidebar"]) {
         
         <script>
         $(document).ready(function() {
-            $('#paired_user').select2({
-              ajax: {
-                url: './api.php',
-                dataType: 'json',
-                data: function (params) {
-                  return {
-                    search: params.term,
-                    action: 'userlist',
-                    page: params.page
-                  };
-                },
-                processResults: function (data, params) {
-                  params.page = params.page || 1;
-                  return {
-                    results: data.items,
-                    pagination: {
-                        more: (params.page * 100) < data.total_count
-                    }
-                  };
-                },
-                cache: true,
-                width: "100%"
-              },
-              placeholder: 'Search for a user to pair with...'
-            });
-
             $(document).keypress(function(event){
                 if (event.which == '13') {
                     event.preventDefault();

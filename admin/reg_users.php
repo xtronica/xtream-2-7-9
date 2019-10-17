@@ -1,10 +1,24 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+<<<<<<< Updated upstream
 include "header.php";
 ?>        <div class="wrapper">
             <div class="container-fluid">
 
+=======
+if (((!$rPermissions["is_reseller"]) OR (!$rPermissions["create_sub_resellers"])) && (!$rPermissions["is_admin"])) { exit; }
+if ($rSettings["sidebar"]) {
+    include "header_sidebar.php";
+} else {
+    include "header.php";
+}
+        if ($rSettings["sidebar"]) { ?>
+        <div class="content-page"><div class="content"><div class="container-fluid">
+        <?php } else { ?>
+        <div class="wrapper"><div class="container-fluid">
+        <?php } ?>
+>>>>>>> Stashed changes
                 <!-- start page title -->
                 <div class="row">
                     <div class="col-12">
@@ -72,6 +86,7 @@ include "header.php";
             </div> <!-- end container -->
         </div>
         <!-- end wrapper -->
+        <?php if ($rSettings["sidebar"]) { echo "</div>"; } ?>
         <!-- Footer Start -->
         <footer class="footer">
             <div class="container-fluid">

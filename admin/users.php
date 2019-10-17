@@ -1,10 +1,23 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
-include "header.php";
-?>        <div class="wrapper">
-            <div class="container-fluid">
 
+if ($rPermissions["is_admin"]) {
+    $rRegisteredUsers = getRegisteredUsers();
+} else {
+    $rRegisteredUsers = getRegisteredUsers($rUserInfo["id"]);
+}
+
+if ($rSettings["sidebar"]) {
+    include "header_sidebar.php";
+} else {
+    include "header.php";
+}
+        if ($rSettings["sidebar"]) { ?>
+        <div class="content-page"><div class="content"><div class="container-fluid">
+        <?php } else { ?>
+        <div class="wrapper"><div class="container-fluid">
+        <?php } ?>
                 <!-- start page title -->
                 <div class="row">
                     <div class="col-12">
@@ -42,22 +55,53 @@ include "header.php";
                 <!-- end page title --> 
                 <div class="row">
                     <div class="col-12">
-                        <div class="alert alert-warning" role="alert">
-                            <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
-                        </div>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
-                                <table id="datatable" class="table dt-responsive nowrap">
+                                <div class="form-group row mb-4">
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" id="user_search" value="" placeholder="Search Users...">
+                                    </div>
+                                    <label class="col-md-2 col-form-label text-center" for="reseller">Filter Results</label>
+                                    <div class="col-md-3">
+                                        <select id="reseller" class="form-control" data-toggle="select2">
+                                            <option value="" selected>All Resellers</option>
+                                            <?php foreach ($rRegisteredUsers as $rRegisteredUser) { ?>
+                                            <option value="<?=$rRegisteredUser["id"]?>"><?=$rRegisteredUser["username"]?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select id="filter" class="form-control" data-toggle="select2">
+                                            <option value="" selected>No Filter</option>
+                                            <option value="1">Active</option>
+                                            <option value="2">Disabled</option>
+                                            <option value="3">Banned</option>
+                                            <option value="4">Expired</option>
+                                            <option value="5">Trial</option>
+                                        </select>
+                                    </div>
+                                    <label class="col-md-1 col-form-label text-center" for="show_entries">Show</label>
+                                    <div class="col-md-1">
+                                        <select id="show_entries" class="form-control" data-toggle="select2">
+                                            <option value="10" selected>10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <table id="datatable-users" class="table dt-responsive nowrap">
                                     <thead>
                                         <tr>
                                             <th class="text-center">ID</th>
                                             <th>Username</th>
                                             <th>Password</th>
-                                            <th>Owner</th>
+                                            <th>Reseller</th>
                                             <th class="text-center">Status</th>
                                             <th class="text-center">Online</th>
                                             <th class="text-center">Expiration</th>
-                                            <th class="text-center">Connections</th>
+                                            <th class="text-center">Active Conns.</th>
+                                            <th class="text-center">Max Conns.</th>
                                             <th class="text-center">Last Connection</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
@@ -90,9 +134,9 @@ include "header.php";
                                         <option value="type=m3u&amp;output=hls">Standard M3U - HLS </option>
                                         <option value="type=m3u&amp;output=mpegts">Standard M3U - MPEGTS</option>
                                     </optgroup>
-                                    <optgroup label="Enigma 2 OE 1.6">
-                                        <option value="type=enigma16&amp;output=hls">Enigma 2 - HLS </option>
-                                        <option value="type=enigma16&amp;output=mpegts">Enigma 2 - MPEGTS</option>
+                                    <optgroup label="Enigma 2 OE">
+                                        <option value="type=enigma22_script&amp;output=hls">Enigma 2 - HLS </option>
+                                        <option value="type=enigma22_script&amp;output=ts">Enigma 2 - MPEGTS</option>
                                     </optgroup>
                                     <optgroup label="DreamBox OE 2.0">
                                         <option value="type=dreambox&amp;output=hls">DreamBox - HLS </option>
@@ -167,6 +211,7 @@ include "header.php";
             </div><!-- /.modal -->
         </div>
         <!-- end wrapper -->
+        <?php if ($rSettings["sidebar"]) { echo "</div>"; } ?>
         <!-- Footer Start -->
         <footer class="footer">
             <div class="container-fluid">
@@ -201,6 +246,8 @@ include "header.php";
         <!-- Datatables init -->
         <script>
         var autoRefresh = true;
+        var rReseller = "";
+        var rFilter = "";
         
         function api(rID, rType) {
             if (rType == "delete") {
@@ -230,7 +277,7 @@ include "header.php";
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
                     });
-                    $("#datatable").DataTable().ajax.reload(null, false);
+                    $("#datatable-users").DataTable().ajax.reload(null, false);
                 } else {
                     $.toast("An error occured while processing your request.");
                 }
@@ -246,7 +293,21 @@ include "header.php";
         
         $("#download_type").change(function() {
             if ($("#download_type").val().length > 0) {
-                $("#download_url").val("http://<?=($rServers[$_INFO["server_id"]]["domain_name"] ? $rServers[$_INFO["server_id"]]["domain_name"] : $rServers[$_INFO["server_id"]]["server_ip"])?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val()));
+                if ($("#download_type").val() == "type=enigma22_script&output=hls" || $("#download_type").val()=="type=enigma22_script&output=ts") {
+                    rBefore = "wget -O /etc/enigma2/iptv.sh \"";
+                    rAfter = "\" && chmod 777 /etc/enigma2/iptv.sh && /etc/enigma2/iptv.sh";
+                } else {
+                    rBefore = "";
+                    rAfter = "";
+                }
+                <?php
+                if (strlen($rUserInfo["reseller_dns"]) > 0) {
+                    $rDNS = $rUserInfo["reseller_dns"];
+                } else {
+                    $rDNS = $rServers[$_INFO["server_id"]]["domain_name"] ? $rServers[$_INFO["server_id"]]["domain_name"] : $rServers[$_INFO["server_id"]]["server_ip"];
+                }
+                ?>
+                $("#download_url").val(rBefore + "http://<?=$rDNS?>:<?=$rServers[$_INFO["server_id"]]["http_broadcast_port"]?>/get.php?username=" + $('.downloadModal').data('username') + "&password=" + $('.downloadModal').data('password') + "&" + decodeURIComponent($('.downloadModal select').val() + rAfter));
             } else {
                 $("#download_url").val("");
             }
@@ -273,15 +334,23 @@ include "header.php";
             }
         }
         
+        function getFilter() {
+            return window.rFilter;
+        }
+        function getReseller() {
+            return window.rReseller;
+        }
+        
         function reloadUsers() {
             if (autoRefresh == true) {
-                $("#datatable").DataTable().ajax.reload(null, false);
+                $("#datatable-users").DataTable().ajax.reload(null, false);
             }
-            setTimeout(reloadUsers, 5000);
+            setTimeout(reloadUsers, 10000);
         }
         $(document).ready(function() {
+            $.fn.dataTable.ext.errMode = 'none';
             $('select').select2({width: '100%'});
-            $("#datatable").DataTable({
+            $("#datatable-users").DataTable({
                 language: {
                     paginate: {
                         previous: "<i class='mdi mdi-chevron-left'>",
@@ -294,25 +363,45 @@ include "header.php";
                 },
                 createdRow: function(row, data, index) {
                     $(row).addClass('user-' + data[0]);
-                    if (data[5] == "ONLINE") {
-                        $(row).addClass('user-online');
-                    }
                 },
                 responsive: false,
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: "./table.php",
+                    url: "./table_search.php",
                     "data": function(d) {
-                        d.id = "users";
+                        d.id = "users",
+                        d.filter = getFilter(),
+                        d.reseller = getReseller()
                     }
                 },
                 columnDefs: [
+<<<<<<< Updated upstream
                     {"className": "dt-center", "targets": [0,4,5,6,7,8,9]}
+=======
+                    {"className": "dt-center", "targets": [0,4,5,6,7,8,9,10,11]},
+                    {"visible": false, "targets": [10]},
+                    {"orderable": false, "targets": [11]}
+>>>>>>> Stashed changes
                 ],
+                order: [[ 0, "desc" ]]
             });
+            $('#user_search').keyup(function(){
+                $('#datatable-users').DataTable().search($(this).val()).draw();
+            })
+            $('#show_entries').change(function(){
+                $('#datatable-users').DataTable().page.len($(this).val()).draw();
+            })
+            $('#filter').change(function(){
+                window.rFilter = $(this).val();
+                $("#datatable-users").DataTable().ajax.reload( null, false );
+            })
+            $('#reseller').change(function(){
+                window.rReseller = $(this).val();
+                $("#datatable-users").DataTable().ajax.reload( null, false );
+            })
             <?php if (!$detect->isMobile()) { ?>
-            setTimeout(reloadUsers, 5000);
+            setTimeout(reloadUsers, 10000);
             <?php } ?>
         });
         </script>

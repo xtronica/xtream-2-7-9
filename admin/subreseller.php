@@ -1,33 +1,51 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if ((!$rPermissions["is_reseller"]) OR (!$rPermissions["create_sub_resellers"])) { exit; }
 
 if (isset($_POST["submit_user"])) {
     if (isset($_POST["edit"])) {
+        if (!hasPermissions("reg_user", $_POST["edit"])) { exit; }
         $rArray = getRegisteredUser($_POST["edit"]);
         unset($rArray["id"]);
     } else {
-        $rArray = Array("username" => "", "password" => "", "email" => "", "member_group_id" => 1);
+        $rArray = Array("username" => "", "date_registered" => time(), "password" => "", "email" => "", "reseller_dns" => "", "member_group_id" => 1, "verified" => 1, "credits" => 0, "notes" => "", "status" => 1, "owner_id" => intval($rUserInfo["id"]));
     }
-    if ((strlen($_POST["username"]) == 0) OR ((strlen($_POST["password"]) == 0) AND (!isset($_POST["edit"])))) {
+    if (((strlen($_POST["username"]) == 0) OR ((strlen($_POST["password"]) == 0)) OR ((strlen($_POST["email"]) == 0))) AND (!isset($_POST["edit"]))) {
         $_STATUS = 1;
     }
-    if (!isset($_STATUS)) {
-        if (isset($_POST["verified"])) {
-            $rArray["verified"] = 1;
-            unset($_POST["verified"]);
-        } else {
-            $rArray["verified"] = 0;
+    $rUser = $_POST;
+    if (!isset($_POST["edit"])) {
+        $rCost = intval($rPermissions["create_sub_resellers_price"]);
+        if ($rUserInfo["credits"] - $rCost < 0) {
+            $_STATUS = 3;
         }
-        if (strlen($_POST["password"]) == 0) {
+        $result = $db->query("SELECT `id` FROM `reg_users` WHERE `username` = '".$db->real_escape_string($_POST["username"])."';");
+        if (($result) && ($result->num_rows > 0)) {
+            $_STATUS = 4;
+        }
+        $result = $db->query("SELECT `subreseller` FROM `subreseller_setup` WHERE `reseller` = ".intval($rUserInfo["member_group_id"]).";");
+        if (($result) && ($result->num_rows > 0)) {
+            $rArray["member_group_id"] = intval($result->fetch_assoc()["subreseller"]);
         } else {
+            $_STATUS = 5;
+        }
+    }
+    if (!isset($_STATUS)) {
+        if (!isset($_POST["edit"])) {
+            $rArray["username"] = $_POST["username"];
+        }
+        if (!strlen($_POST["password"]) == 0) {
             $rArray["password"] = cryptPassword($_POST["password"]);
         }
-        unset($_POST["password"]);
-        foreach($_POST as $rKey => $rValue) {
-            if (isset($rArray[$rKey])) {
-                $rArray[$rKey] = $rValue;
-            }
+        if (isset($_POST["email"])) {
+            $rArray["email"] = $_POST["email"];
+        }
+        if (isset($_POST["reseller_dns"])) {
+            $rArray["reseller_dns"] = $_POST["reseller_dns"];
+        }
+        if (isset($_POST["notes"])) {
+            $rArray["notes"] = $_POST["notes"];
         }
         $rCols = "`".implode('`,`', array_keys($rArray))."`";
         foreach (array_values($rArray) as $rValue) {
@@ -52,17 +70,22 @@ if (isset($_POST["submit_user"])) {
             } else {
                 $rInsertID = $db->insert_id;
             }
+            if (isset($rCost)) {
+                $rNewCredits = intval($rUserInfo["credits"]) - $rCost;
+                $db->query("UPDATE `reg_users` SET `credits` = ".$rNewCredits." WHERE `id` = ".intval($rUserInfo["id"]).";");
+                $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rArray["username"])."', '".$db->real_escape_string($rArray["password"])."', ".intval(time()).", '[<b>UserPanel</b> -> <u>New Subreseller</u>] Credits: <font color=\"green\">".$rUserInfo["credits"]."</font> -> <font color=\"red\">".$rNewCredits."</font>');");
+                $rUserInfo["credits"] = $rNewCredits;
+            }
             $_STATUS = 0;
+            $_GET["id"] = $rInsertID;
         } else {
             $_STATUS = 2;
-        }
-        if (!isset($_GET["id"])) {
-            $_GET["id"] = $rInsertID;
         }
     }
 }
 
 if (isset($_GET["id"])) {
+    if (!hasPermissions("reg_user", $_GET["id"])) { exit; }
     $rUser = getRegisteredUser($_GET["id"]);
     if (!$rUser) {
         exit;
@@ -84,10 +107,10 @@ if ($rSettings["sidebar"]) {
                         <div class="page-title-box">
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
-                                    <a href="./reg_users.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Registered Users</li></a>
+                                    <a href="./reg_users.php"><li class="breadcrumb-item"><i class="mdi mdi-backspace"></i> Back to Subresellers</li></a>
                                 </ol>
                             </div>
-                            <h4 class="page-title"><?php if (isset($rUser)) { echo "Edit"; } else { echo "Add"; } ?> Registered User</h4>
+                            <h4 class="page-title"><?php if (isset($rUser)) { echo "Edit"; } else { echo "Add"; } ?> Subreseller</h4>
                         </div>
                     </div>
                 </div>     
@@ -99,22 +122,49 @@ if ($rSettings["sidebar"]) {
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            User operation was completed successfully.
+                            Subreseller operation was completed successfully.
                         </div>
-                        <?php } else if ((isset($_STATUS)) && ($_STATUS > 0)) { ?>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == 1)) { ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            Please ensure you enter a username, password and email address.
+                        </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == 2)) { ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                             There was an error performing this operation! Please check the form entry and try again.
                         </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == 3)) { ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            You don't have enough credits to complete this purchase!
+                        </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == 4)) { ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            This username has already been taken. Please try another.
+                        </div>
+                        <?php } else if ((isset($_STATUS)) && ($_STATUS == 5)) { ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            Your group has not been set up to create new subresellers yet.
+                        </div>
                         <?php } ?>
                         <div class="card">
                             <div class="card-body">
-                                <form action="./reg_user.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="user_form">
-                                    <?php if (isset($rUser)) { ?>
+                                <form action="./subreseller.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="user_form">
+                                    <?php if (isset($_GET["id"])) { ?>
                                     <input type="hidden" name="edit" value="<?=$rUser["id"]?>" />
-                                    <input type="hidden" name="status" value="<?=$rUser["status"]?>" />
                                     <?php } ?>
                                     <div id="basicwizard">
                                         <ul class="nav nav-pills bg-light nav-justified form-wizard-header mb-4">
@@ -124,12 +174,14 @@ if ($rSettings["sidebar"]) {
                                                     <span class="d-none d-sm-inline">Details</span>
                                                 </a>
                                             </li>
+                                            <?php if (!isset($_GET["id"])) { ?>
                                             <li class="nav-item">
-                                                <a href="#advanced-options" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2">
-                                                    <i class="mdi mdi-folder-alert-outline mr-1"></i>
-                                                    <span class="d-none d-sm-inline">Advanced</span>
+                                                <a href="#review-purchase" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2">
+                                                    <i class="mdi mdi-book-open-variant mr-1"></i>
+                                                    <span class="d-none d-sm-inline">Review Purchase</span>
                                                 </a>
                                             </li>
+                                            <?php } ?>
                                         </ul>
                                         <div class="tab-content b-0 mb-0 pt-0">
                                             <div class="tab-pane" id="user-details">
@@ -138,11 +190,11 @@ if ($rSettings["sidebar"]) {
                                                         <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="username">Username</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="username" name="username" value="<?php if (isset($rUser)) { echo $rUser["username"]; } ?>">
+                                                                <input <?php if (isset($_GET["id"])) { echo "disabled "; } ?>type="text" class="form-control" id="username" name="username" value="<?php if (isset($rUser)) { echo $rUser["username"]; } ?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="password"><?php if (isset($rUser)) { ?>Change <?php } ?>Password</label>
+                                                            <label class="col-md-4 col-form-label" for="password"><?php if (isset($_GET["id"])) { ?>Change <?php } ?>Password</label>
                                                             <div class="col-md-8">
                                                                 <input type="text" class="form-control" id="password" name="password" value="">
                                                             </div>
@@ -151,28 +203,6 @@ if ($rSettings["sidebar"]) {
                                                             <label class="col-md-4 col-form-label" for="email">Email Address</label>
                                                             <div class="col-md-8">
                                                                 <input type="text" class="form-control" id="email" name="email" value="<?php if (isset($rUser)) { echo $rUser["email"]; } ?>">
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="member_group_id">Member Group</label>
-                                                            <div class="col-md-8">
-                                                                <select name="member_group_id" id="member_group_id" class="form-control select2" data-toggle="select2">
-                                                                    <?php foreach (getMemberGroups() as $rGroup) { ?>
-                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["member_group_id"]) == intval($rGroup["group_id"])) { echo "selected "; } } ?>value="<?=$rGroup["group_id"]?>"><?=$rGroup["group_name"]?></option>
-                                                                    <?php } ?>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-group row mb-4">
-                                                            <label class="col-md-4 col-form-label" for="verified">Verified</label>
-                                                            <div class="col-md-2">
-                                                                <input name="verified" id="verified" type="checkbox"<?php if ((isset($rUser)) && ($rUser["verified"] == 1)) { echo "checked "; } ?>data-plugin="switchery" class="js-switch" data-color="#039cfd"/>
-                                                            </div>
-<<<<<<< Updated upstream
-=======
-                                                            <label class="col-md-4 col-form-label" for="credits">Credits</label>
-                                                            <div class="col-md-2">
-                                                                <input type="text" class="form-control" id="credits" onkeypress="return isNumberKey(event)" name="credits" value="<?php if (isset($rUser)) { echo $rUser["credits"]; } else { echo "0"; } ?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">
@@ -186,30 +216,58 @@ if ($rSettings["sidebar"]) {
                                                             <div class="col-md-8">
                                                                 <textarea id="notes" name="notes" class="form-control" rows="3" placeholder=""><?php if (isset($rUser)) { echo $rUser["notes"]; } ?></textarea>
                                                             </div>
->>>>>>> Stashed changes
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="next list-inline-item float-right">
-                                                        <input name="submit_user" type="submit" class="btn btn-primary" value="<?php if (isset($rUser)) { echo "Edit"; } else { echo "Add"; } ?>" />
+                                                        <?php if (!isset($_GET["id"])) { ?>
+                                                        <a href="javascript: void(0);" class="btn btn-secondary">Next</a>
+                                                        <?php } else { ?>
+                                                        <input name="submit_user" type="submit" class="btn btn-primary" value="Edit" />
+                                                        <?php } ?>
                                                     </li>
                                                 </ul>
                                             </div>
-                                            <div class="tab-pane" id="advanced-options">
+                                            <?php if (!isset($_GET["id"])) { ?>
+                                            <div class="tab-pane" id="review-purchase">
                                                 <div class="row">
                                                     <div class="col-12">
-                                                        <p class="sub-header text-center">
-                                                            Advanced options and reseller options are coming in a future release. Stay tuned.
-                                                        </p>
+                                                        <?php if ($rUserInfo["credits"] - $rPermissions["create_sub_resellers_price"] < 0) { ?>
+                                                        <div class="alert alert-danger" role="alert" id="no-credits">
+                                                            <i class="mdi mdi-block-helper mr-2"></i> You do not have enough credits to complete this transaction!
+                                                        </div>
+                                                        <?php } ?>
+                                                        <div class="form-group row mb-4">
+                                                            <table class="table" id="credits-cost">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th class="text-center">Total Credits</th>
+                                                                        <th class="text-center">Purchase Cost</th>
+                                                                        <th class="text-center">Remaining Credits</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td class="text-center"><?=number_format($rUserInfo["credits"], 2)?></td>
+                                                                        <td class="text-center" id="cost_credits"><?=number_format($rPermissions["create_sub_resellers_price"], 2)?></td>
+                                                                        <td class="text-center" id="remaining_credits"><?=number_format($rUserInfo["credits"] - $rPermissions["create_sub_resellers_price"], 2)?></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="previous list-inline-item">
                                                         <a href="javascript: void(0);" class="btn btn-secondary">Previous</a>
                                                     </li>
+                                                    <li class="next list-inline-item float-right">
+                                                        <input <?php if ($rUserInfo["credits"] - $rPermissions["create_sub_resellers_price"] < 0) { echo "disabled "; } ?>name="submit_user" type="submit" class="btn btn-primary purchase" value="Purchase" />
+                                                    </li>
                                                 </ul>
                                             </div>
+                                            <?php } ?>
                                         </div> <!-- tab-content -->
                                     </div> <!-- end #basicwizard-->
                                 </form>
@@ -243,7 +301,8 @@ if ($rSettings["sidebar"]) {
         <script src="assets/libs/clockpicker/bootstrap-clockpicker.min.js"></script>
         <script src="assets/libs/moment/moment.min.js"></script>
         <script src="assets/libs/daterangepicker/daterangepicker.js"></script>
-
+        <script src="assets/js/pages/jquery.number.min.js"></script>
+        
         <!-- Plugins js-->
         <script src="assets/libs/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js"></script>
 
@@ -270,58 +329,12 @@ if ($rSettings["sidebar"]) {
             });
           };
         }(jQuery));
-        
-        function selectAll() {
-            $(".bouquet-checkbox").each(function() {
-                $(this).prop('checked', true);
-            });
-        }
-        
-        function selectNone() {
-            $(".bouquet-checkbox").each(function() {
-                $(this).prop('checked', false);
-            });
-        }
-        function isValidDate(dateString) {
-              var regEx = /^\d{4}-\d{2}-\d{2}$/;
-              if(!dateString.match(regEx)) return false;  // Invalid format
-              var d = new Date(dateString);
-              var dNum = d.getTime();
-              if(!dNum && dNum !== 0) return false; // NaN value, Invalid date
-              return d.toISOString().slice(0,10) === dateString;
-        }
-        
-        function isNumberKey(evt) {
-            var charCode = (evt.which) ? evt.which : evt.keyCode;
-            if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-        
+       
         $(document).ready(function() {
             $('select.select2').select2({width: '100%'})
             var elems = Array.prototype.slice.call(document.querySelectorAll('.js-switch'));
             elems.forEach(function(html) {
               var switchery = new Switchery(html);
-            });
-            
-            $('#exp_date').daterangepicker({
-                singleDatePicker: true,
-                showDropdowns: true,
-                minDate: new Date(),
-                locale: {
-                    format: 'YYYY-MM-DD'
-                }
-            });
-            
-            $("#no_expire").change(function() {
-                if ($(this).prop("checked")) {
-                    $("#exp_date").prop("disabled", true);
-                } else {
-                    $("#exp_date").removeAttr("disabled");
-                }
             });
             
             $(document).keypress(function(event){
@@ -330,7 +343,6 @@ if ($rSettings["sidebar"]) {
                 }
             });
             
-            $("#max_connections").inputFilter(function(value) { return /^\d*$/.test(value); });
             $("form").attr('autocomplete', 'off');
         });
         </script>

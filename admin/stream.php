@@ -280,9 +280,16 @@ if (isset($_GET["id"])) {
         $rServerTree[] = Array("id" => $rServer["id"], "parent" => "#", "text" => $rServer["server_name"], "icon" => "mdi mdi-server-network", "state" => Array("opened" => true));
     }
 }
-include "header.php"; ?>
-        <div class="wrapper boxed-layout">
-            <div class="container-fluid">
+if ($rSettings["sidebar"]) {
+    include "header_sidebar.php";
+} else {
+    include "header.php";
+}
+        if ($rSettings["sidebar"]) { ?>
+        <div class="content-page"><div class="content boxed-layout"><div class="container-fluid">
+        <?php } else { ?>
+        <div class="wrapper boxed-layout"><div class="container-fluid">
+        <?php } ?>
                 <!-- start page title -->
                 <div class="row">
                     <div class="col-12">
@@ -705,7 +712,7 @@ include "header.php"; ?>
             </div> <!-- end container -->
         </div>
         <!-- end wrapper -->
-
+        <?php if ($rSettings["sidebar"]) { echo "</div>"; } ?>
         <!-- file preview template -->
         <div class="d-none" id="uploadPreviewTemplate">
             <div class="card mt-1 mb-0 shadow-none border">
