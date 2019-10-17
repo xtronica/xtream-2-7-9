@@ -1,12 +1,6 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
-<<<<<<< Updated upstream
-include "header.php";
-?>        <div class="wrapper">
-            <div class="container-fluid">
-
-=======
 if (((!$rPermissions["is_reseller"]) OR (!$rPermissions["create_sub_resellers"])) && (!$rPermissions["is_admin"])) { exit; }
 if ($rSettings["sidebar"]) {
     include "header_sidebar.php";
@@ -18,7 +12,6 @@ if ($rSettings["sidebar"]) {
         <?php } else { ?>
         <div class="wrapper"><div class="container-fluid">
         <?php } ?>
->>>>>>> Stashed changes
                 <!-- start page title -->
                 <div class="row">
                     <div class="col-12">
@@ -27,29 +20,27 @@ if ($rSettings["sidebar"]) {
                                 <ol class="breadcrumb m-0">
                                     <li>
                                         <?php if (!$detect->isMobile()) { ?>
-                                        <a href="#" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="#" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> <span class="auto-text">Auto-Refresh</span>
                                             </button>
                                         </a>
                                         <?php } else { ?>
-                                        <a href="javascript:location.reload();" onClick="toggleAuto();" style="margin-right:10px;">
+                                        <a href="javascript:location.reload();" onClick="toggleAuto();">
                                             <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-refresh"></i> Refresh
                                             </button>
                                         </a>
                                         <?php } ?>
-                                    </li>
-                                    <li>
-                                        <a href="reg_user.php">
+                                        <a href="<?php if ($rPermissions["is_admin"]) { echo "reg_user"; } else { echo "subreseller"; } ?>.php">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
-                                                <i class="mdi mdi-plus"></i> Add Registered User
+                                                <i class="mdi mdi-plus"></i> Add <?php if ($rPermissions["is_admin"]) { ?>Registered User<?php } else { ?>Subreseller<?php } ?>
                                             </button>
                                         </a>
                                     </li>
                                 </ol>
                             </div>
-                            <h4 class="page-title">Registered Users</h4>
+                            <h4 class="page-title"><?php if ($rPermissions["is_admin"]) { ?>Registered Users<?php } else { ?>Subresellers<?php } ?></h4>
                         </div>
                     </div>
                 </div>     
@@ -70,7 +61,7 @@ if ($rSettings["sidebar"]) {
                                             <th class="text-center">IP</th>
                                             <th class="text-center">Type</th>
                                             <th class="text-center">Status</th>
-                                            <th class="text-center">Verified</th>
+                                            <th class="text-center">Credits</th>
                                             <th class="text-center">Last Login</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
@@ -187,7 +178,12 @@ if ($rSettings["sidebar"]) {
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,3,4,5,6,7,8]}
+                    {"className": "dt-center", "targets": [0,3,4,5,6,7,8]},
+                    <?php if ($rPermissions["is_admin"]) { ?>
+                    {"visible": false, "targets": [9]}
+                    <?php } else { ?>
+                    {"visible": false, "targets": [4,9]}
+                    <?php } ?>
                 ],
             });
             <?php if (!$detect->isMobile()) { ?>

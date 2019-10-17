@@ -4,6 +4,7 @@ if (!isset($_SESSION['user_id'])) { exit; }
 
 if (isset($_GET["action"])) {
     if ($_GET["action"] == "stream") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rStreamID = intval($_GET["stream_id"]);
         $rServerID = intval($_GET["server_id"]);
         $rSub = $_GET["sub"];
@@ -30,11 +31,33 @@ if (isset($_GET["action"])) {
         }
     } else if ($_GET["action"] == "user") {
         $rUserID = intval($_GET["user_id"]);
+        // Check if this user falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("user", $rUserID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
-            $db->query("DELETE FROM `users` WHERE `id` = ".$db->real_escape_string($rUserID).";");
-            $db->query("DELETE FROM `user_output` WHERE `user_id` = ".$db->real_escape_string($rUserID).";");
-            echo json_encode(Array("result" => True));exit;
+            if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                if ($rPermissions["is_reseller"]) {
+                    $rUserDetails = getUser($rUserID);
+                    if ($rUserDetails) {
+                        if ($rUserDetails["is_mag"]) {
+                            $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rUserDetails["username"])."', '".$db->real_escape_string($rUserDetails["password"])."', ".intval(time()).", '[<b>UserPanel</b> -> <u>Delete MAG</u>]');");
+                        } else if ($rUserDetails["is_e2"]) {
+                            $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rUserDetails["username"])."', '".$db->real_escape_string($rUserDetails["password"])."', ".intval(time()).", '[<b>UserPanel</b> -> <u>Delete Enigma</u>]');");
+                        } else {
+                            $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rUserDetails["username"])."', '".$db->real_escape_string($rUserDetails["password"])."', ".intval(time()).", '[<b>UserPanel</b> -> <u>Delete Line</u>]');");
+                        }
+                    }
+                }
+                $db->query("DELETE FROM `users` WHERE `id` = ".$db->real_escape_string($rUserID).";");
+                $db->query("DELETE FROM `user_output` WHERE `user_id` = ".$db->real_escape_string($rUserID).";");
+                $db->query("DELETE FROM `enigma2_devices` WHERE `user_id` = ".$db->real_escape_string($rUserID).";");
+                $db->query("DELETE FROM `mag_devices` WHERE `user_id` = ".$db->real_escape_string($rUserID).";");
+                echo json_encode(Array("result" => True));exit;
+            } else {
+                echo json_encode(Array("result" => False));exit;
+            }
         } else if ($rSub == "enable") {
             $db->query("UPDATE `users` SET `enabled` = 1 WHERE `id` = ".$db->real_escape_string($rUserID).";");
             echo json_encode(Array("result" => True));exit;
@@ -61,6 +84,10 @@ if (isset($_GET["action"])) {
         }
     } else if ($_GET["action"] == "user_activity") {
         $rPID = intval($_GET["pid"]);
+        // Check if the user running this PID falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("pid", $rPID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
         $rSub = $_GET["sub"];
         if ($rSub == "kill") {
             exec("kill -9 ".$rPID);
@@ -71,10 +98,24 @@ if (isset($_GET["action"])) {
         }
     } else if ($_GET["action"] == "reg_user") {
         $rUserID = intval($_GET["user_id"]);
+        // Check if this registered user falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("reg_user", $rUserID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
-            $db->query("DELETE FROM `reg_users` WHERE `id` = ".$db->real_escape_string($rUserID).";");
-            echo json_encode(Array("result" => True));exit;
+            if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                if ($rPermissions["is_reseller"]) {
+                    $rUserDetails = getRegisteredUser($rUserID);
+                    if ($rUserDetails) {
+                        $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rUserDetails["username"])."', '', ".intval(time()).", '[<b>UserPanel</b> -> <u>Delete Subreseller</u>]');");
+                    }
+                }
+                $db->query("DELETE FROM `reg_users` WHERE `id` = ".$db->real_escape_string($rUserID).";");
+                echo json_encode(Array("result" => True));exit;
+            } else {
+                echo json_encode(Array("result" => False));exit;
+            }
         } else if ($rSub == "enable") {
             $db->query("UPDATE `reg_users` SET `status` = 1 WHERE `id` = ".$db->real_escape_string($rUserID).";");
             echo json_encode(Array("result" => True));exit;
@@ -84,8 +125,38 @@ if (isset($_GET["action"])) {
         } else {
             echo json_encode(Array("result" => False));exit;
         }
+    } else if ($_GET["action"] == "ticket") {
+        $rTicketID = intval($_GET["ticket_id"]);
+        // Check if this ticket falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("ticket", $rTicketID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
+        $rSub = $_GET["sub"];
+        if ($rSub == "delete") {
+            $db->query("DELETE FROM `tickets` WHERE `id` = ".$db->real_escape_string($rTicketID).";");
+            $db->query("DELETE FROM `tickets_replies` WHERE `ticket_id` = ".$db->real_escape_string($rTicketID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else if ($rSub == "close") {
+            $db->query("UPDATE `tickets` SET `status` = 0 WHERE `id` = ".$db->real_escape_string($rTicketID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else if ($rSub == "reopen") {
+            $db->query("UPDATE `tickets` SET `status` = 1 WHERE `id` = ".$db->real_escape_string($rTicketID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else if ($rSub == "unread") {
+            $db->query("UPDATE `tickets` SET `admin_read` = 0 WHERE `id` = ".$db->real_escape_string($rTicketID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else if ($rSub == "read") {
+            $db->query("UPDATE `tickets` SET `admin_read` = 1 WHERE `id` = ".$db->real_escape_string($rTicketID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            echo json_encode(Array("result" => False));exit;
+        }
     } else if ($_GET["action"] == "mag") {
         $rMagID = intval($_GET["mag_id"]);
+        // Check if this device falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("mag", $rMagID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
             $rMagDetails = getMag($rMagID);
@@ -99,6 +170,7 @@ if (isset($_GET["action"])) {
             echo json_encode(Array("result" => False));exit;
         }
     } else if ($_GET["action"] == "mag_event") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rMagID = intval($_GET["mag_id"]);
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
@@ -108,6 +180,7 @@ if (isset($_GET["action"])) {
             echo json_encode(Array("result" => False));exit;
         }
     } else if ($_GET["action"] == "epg") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rEPGID = intval($_GET["epg_id"]);
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
@@ -116,8 +189,32 @@ if (isset($_GET["action"])) {
         } else {
             echo json_encode(Array("result" => False));exit;
         }
+    } else if ($_GET["action"] == "profile") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rProfileID = intval($_GET["profile_id"]);
+        $rSub = $_GET["sub"];
+        if ($rSub == "delete") {
+            $db->query("DELETE FROM `transcoding_profiles` WHERE `profile_id` = ".$db->real_escape_string($rProfileID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            echo json_encode(Array("result" => False));exit;
+        }
+    } else if ($_GET["action"] == "subreseller_setup") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rID = intval($_GET["id"]);
+        $rSub = $_GET["sub"];
+        if ($rSub == "delete") {
+            $db->query("DELETE FROM `subreseller_setup` WHERE `id` = ".$db->real_escape_string($rID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            echo json_encode(Array("result" => False));exit;
+        }
     } else if ($_GET["action"] == "enigma") {
         $rEnigmaID = intval($_GET["enigma_id"]);
+        // Check if this device falls under the reseller or subresellers.
+        if (($rPermissions["is_reseller"]) && (!hasPermissions("e2", $rEnigmaID))) {
+            echo json_encode(Array("result" => False));exit;
+        }
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
             $rEnigmaDetails = getEnigma($rEnigmaID);
@@ -131,6 +228,7 @@ if (isset($_GET["action"])) {
             echo json_encode(Array("result" => False));exit;
         }
     } else if ($_GET["action"] == "server") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rServerID = intval($_GET["server_id"]);
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
@@ -153,7 +251,34 @@ if (isset($_GET["action"])) {
         } else {
             echo json_encode(Array("result" => False));exit;
         }
+    } else if ($_GET["action"] == "package") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rPackageID = intval($_GET["package_id"]);
+        $rSub = $_GET["sub"];
+        if ($rSub == "delete") {
+            $db->query("DELETE FROM `packages` WHERE `id` = ".$db->real_escape_string($rPackageID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else if (in_array($rSub, Array("is_trial", "is_official", "can_gen_mag", "can_gen_e2", "only_mag", "only_e2"))) {
+            $db->query("UPDATE `packages` SET `".$db->real_escape_string($rSub)."` = ".intval($_GET["value"])." WHERE `id` = ".$db->real_escape_string($rPackageID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            echo json_encode(Array("result" => False));exit;
+        }
+    } else if ($_GET["action"] == "group") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rGroupID = intval($_GET["group_id"]);
+        $rSub = $_GET["sub"];
+        if ($rSub == "delete") {
+            $db->query("DELETE FROM `member_groups` WHERE `group_id` = ".$db->real_escape_string($rGroupID)." AND `can_delete` = 1;");
+            echo json_encode(Array("result" => True));exit;
+        } else if (in_array($rSub, Array("is_banned", "is_admin", "is_reseller"))) {
+            $db->query("UPDATE `member_groups` SET `".$db->real_escape_string($rSub)."` = ".intval($_GET["value"])." WHERE `group_id` = ".$db->real_escape_string($rGroupID).";");
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            echo json_encode(Array("result" => False));exit;
+        }
     } else if ($_GET["action"] == "bouquet") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rBouquetID = intval($_GET["bouquet_id"]);
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
@@ -163,6 +288,7 @@ if (isset($_GET["action"])) {
             echo json_encode(Array("result" => False));exit;
         }
     } else if ($_GET["action"] == "category") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $rCategoryID = intval($_GET["category_id"]);
         $rSub = $_GET["sub"];
         if ($rSub == "delete") {
@@ -171,8 +297,6 @@ if (isset($_GET["action"])) {
         } else {
             echo json_encode(Array("result" => False));exit;
         }
-<<<<<<< Updated upstream
-=======
     } else if ($_GET["action"] == "get_package") {
         $rReturn = Array();
         $rResult = $db->query("SELECT `bouquets`, `official_credits` AS `cost_credits`, `official_duration`, `official_duration_in`, `max_connections`, `can_gen_mag`, `can_gen_e2`, `only_mag`, `only_e2` FROM `packages` WHERE `id` = ".intval($_GET["package_id"]).";");
@@ -218,14 +342,15 @@ if (isset($_GET["action"])) {
             echo json_encode(Array("result" => False));
         }
         exit;
->>>>>>> Stashed changes
     } else if ($_GET["action"] == "streams") {
-        $rData = [];
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rData = Array();
         $rStreamIDs = json_decode($_GET["stream_ids"], True);
         $rStreams = getStreams(null, false, $rStreamIDs);
         echo json_encode(Array("result" => True, "data" => $rStreams));
         exit;
     } else if ($_GET["action"] == "stats") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $return = Array("cpu" => 0, "mem" => 0, "uptime" => "--", "total_running_streams" => 0, "bytes_sent" => 0, "bytes_received" => 0);
         if (isset($_GET["server_id"])) {
             $rServerID = intval($_GET["server_id"]);
@@ -298,7 +423,19 @@ if (isset($_GET["action"])) {
             
         }
         echo json_encode($return);exit;
+    } else if ($_GET["action"] == "reseller_dashboard") {
+        if ($rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $return = Array("open_connections" => 0, "online_users" => 0, "active_accounts" => 0, "credits" => 0);
+        $result = $db->query("SELECT `activity_id` FROM `user_activity_now` AS `a` INNER JOIN `users` AS `u` ON `a`.`user_id` = `u`.`id` WHERE `u`.`member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).");");
+        $return["open_connections"] = $result->num_rows;
+        $result = $db->query("SELECT `activity_id` FROM `user_activity_now` AS `a` INNER JOIN `users` AS `u` ON `a`.`user_id` = `u`.`id` WHERE `u`.`member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).") GROUP BY `a`.`user_id`;");
+        $return["online_users"] = $result->num_rows;
+        $result = $db->query("SELECT `id` FROM `users` WHERE `member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).");");
+        $return["active_accounts"] = $result->num_rows;
+        $return["credits"] = $rUserInfo["credits"];
+        echo json_encode($return);exit;
     } else if ($_GET["action"] == "review_bouquet") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $return = Array("streams" => Array(), "vod" => Array(), "series" => Array(), "result" => true);
         if (isset($_POST["data"]["stream"])) {
             foreach ($_POST["data"]["stream"] as $rStreamID) {
@@ -324,6 +461,7 @@ if (isset($_GET["action"])) {
         }
         echo json_encode($return);exit;
     } else if ($_GET["action"] == "userlist") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         $return = Array("total_count" => 0, "items" => Array(), "result" => true);
         if (isset($_GET["search"])) {
             if (isset($_GET["page"])) {
@@ -342,8 +480,52 @@ if (isset($_GET["action"])) {
         }
         echo json_encode($return);exit;
     } else if ($_GET["action"] == "force_epg") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
         echo exec("/home/xtreamcodes/iptv_xtream_codes/php/bin/php /home/xtreamcodes/iptv_xtream_codes/crons/epg.php");
         echo json_encode(Array("result" => True));exit;
+    } else if ($_GET["action"] == "sort_bouquet") {
+        if (!$rPermissions["is_admin"]) { echo json_encode(Array("result" => False)); exit; }
+        $rBouquet = getBouquet($_GET["bouquet_id"]);
+        $rOrdered = Array();
+        if (($_GET["type"] == "stream") OR ($_GET["type"] == "movie")) {
+            $rChannels = json_decode($rBouquet["bouquet_channels"], True);
+            if (is_array($rChannels)) {
+                if ($_GET["type"] == "stream") {
+                    $result = $db->query("SELECT `streams`.`id`, `streams`.`type`, `streams`.`category_id`, `streams`.`stream_display_name`, `stream_categories`.`category_name` FROM `streams`, `stream_categories` WHERE `streams`.`type` IN (1,3) AND `streams`.`category_id` = `stream_categories`.`id` AND `streams`.`id` IN (".$db->real_escape_string(join(",", $rChannels)).") ORDER BY `streams`.`stream_display_name` ASC;");
+                } else {
+                    $result = $db->query("SELECT `streams`.`id`, `streams`.`type`, `streams`.`category_id`, `streams`.`stream_display_name`, `stream_categories`.`category_name` FROM `streams`, `stream_categories` WHERE `streams`.`type` = 2 AND `streams`.`category_id` = `stream_categories`.`id` AND `streams`.`id` IN (".$db->real_escape_string(join(",", $rChannels)).") ORDER BY `streams`.`stream_display_name` ASC;");
+                }
+                if (($result) && ($result->num_rows > 0)) {
+                    while ($row = $result->fetch_assoc()) {
+                        $rOrdered[] = intval($row["id"]);
+                    }
+                }
+            }
+            foreach ($rChannels as $rChannel) {
+                if (!in_array(intval($rChannel), $rOrdered)) {
+                    $rOrdered[] = intval($rChannel);
+                }
+            }
+            if (count($rOrdered) > 0) {
+                $db->query("UPDATE `bouquets` SET `bouquet_channels` = '".$db->real_escape_string(json_encode($rOrdered))."' WHERE `id` = ".intval($rBouquet["id"]).";");
+            }
+            echo json_encode(Array("result" => True));exit;
+        } else {
+            $rSeries = json_decode($rBouquet["bouquet_series"], True);
+            if (is_array($rSeries)) {
+                $result = $db->query("SELECT `series`.`id`, `series`.`category_id`, `series`.`title`, `stream_categories`.`category_name` FROM `series`, `stream_categories` WHERE `series`.`category_id` = `stream_categories`.`id` AND `series`.`id` IN (".$db->real_escape_string(join(",", $rSeries)).") ORDER BY `series`.`title` ASC;");
+                if (($result) && ($result->num_rows > 0)) {
+                    while ($row = $result->fetch_assoc()) {
+                        $rOrdered[] = intval($row["id"]);
+                    }
+                }
+            }
+            if (count($rOrdered) > 0) {
+                $db->query("UPDATE `bouquets` SET `bouquet_series` = '".$db->real_escape_string(join(",", $rOrdered))."' WHERE `id` = ".intval($rBouquet["id"]).";");
+            }
+            echo json_encode(Array("result" => True));exit;
+        }
+        echo json_encode(Array("result" => False));exit;
     }
 }
 echo json_encode(Array("result" => False));

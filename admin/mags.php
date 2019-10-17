@@ -25,7 +25,27 @@ if ($rSettings["sidebar"]) {
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
                                     <li>
-                                        <a href="mag.php<?php if($rCategory) { echo "?id=".$rCategory["id"]; }?>">
+                                        <?php if (!$detect->isMobile()) { ?>
+                                        <a href="#" onClick="toggleAuto();">
+                                            <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-refresh"></i> <span class="auto-text">Auto-Refresh</span>
+                                            </button>
+                                        </a>
+                                        <?php } else { ?>
+                                        <a href="javascript:location.reload();" onClick="toggleAuto();">
+                                            <button type="button" class="btn btn-dark waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-refresh"></i> Refresh
+                                            </button>
+                                        </a>
+                                        <?php }
+                                        if ($rPermissions["is_admin"]) { ?>
+                                        <a href="mag.php">
+                                            <button type="button" class="btn btn-primary waves-effect waves-light btn-sm">
+                                                <i class="mdi mdi-link"></i> Link MAG Device
+                                            </button>
+                                        </a>
+                                        <?php } ?>
+                                        <a href="user<?php if ($rPermissions["is_reseller"]) { echo "_reseller"; } ?>.php?mag">
                                             <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
                                                 <i class="mdi mdi-plus"></i> Add MAG Device
                                             </button>
@@ -79,8 +99,13 @@ if ($rSettings["sidebar"]) {
                                     <thead>
                                         <tr>
                                             <th class="text-center">ID</th>
-                                            <th>MAC Address</th>
-                                            <th>Created User</th>
+                                            <th>Username</th>
+                                            <th class="text-center">MAC Adress</th>
+                                            <th>Owner</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Online</th>
+                                            <th class="text-center">Trial</th>
+                                            <th class="text-center">Expiration</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -129,23 +154,28 @@ if ($rSettings["sidebar"]) {
 
         <!-- Datatables init -->
         <script>
-<<<<<<< Updated upstream
-=======
         var autoRefresh = true;
         var rReseller = "";
         var rFilter = "";
         
->>>>>>> Stashed changes
         function api(rID, rType) {
             if (rType == "delete") {
-                if (confirm('Are you sure you want to delete this device?') == false) {
+                if (confirm('Are you sure you want to delete this user and device?') == false) {
                     return;
                 }
             }
-            $.getJSON("./api.php?action=mag&sub=" + rType + "&mag_id=" + rID, function(data) {
+            $.getJSON("./api.php?action=user&sub=" + rType + "&user_id=" + rID, function(data) {
                 if (data.result === true) {
                     if (rType == "delete") {
-                        $.toast("Device has been deleted.");
+                        $.toast("User and device has been deleted.");
+                    } else if (rType == "enable") {
+                        $.toast("User and device has been enabled.");
+                    } else if (rType == "disable") {
+                        $.toast("User and device has been disabled.");
+                    } else if (rType == "unban") {
+                        $.toast("User and device has been unbanned.");
+                    } else if (rType == "ban") {
+                        $.toast("User and device has been banned.");
                     }
                     $.each($('.tooltip'), function (index, element) {
                         $(this).remove();
@@ -210,17 +240,11 @@ if ($rSettings["sidebar"]) {
                     }
                 },
                 columnDefs: [
-<<<<<<< Updated upstream
-                    {"className": "dt-center", "targets": [0,1,2,3]}
-=======
                     {"className": "dt-center", "targets": [0,2,4,5,6,7,8]},
                     {"orderable": false, "targets": [8]}
->>>>>>> Stashed changes
                 ],
                 order: [[ 0, "desc" ]]
             });
-<<<<<<< Updated upstream
-=======
             $('#user_search').keyup(function(){
                 $('#datatable-users').DataTable().search($(this).val()).draw();
             })
@@ -238,7 +262,6 @@ if ($rSettings["sidebar"]) {
             <?php if (!$detect->isMobile()) { ?>
             setTimeout(reloadUsers, 10000);
             <?php } ?>
->>>>>>> Stashed changes
         });
         </script>
 

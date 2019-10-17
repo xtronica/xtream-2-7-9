@@ -33,16 +33,9 @@ if ($rSettings["sidebar"]) {
                                         </a>
                                         <?php } ?>
                                     </li>
-                                    <li>
-                                        <a href="user.php">
-                                            <button type="button" class="btn btn-success waves-effect waves-light btn-sm">
-                                                <i class="mdi mdi-plus"></i> Add User
-                                            </button>
-                                        </a>
-                                    </li>
                                 </ol>
                             </div>
-                            <h4 class="page-title">User Activity</h4>
+                            <h4 class="page-title">Live Connections</h4>
                         </div>
                     </div>
                 </div>     
@@ -153,7 +146,8 @@ if ($rSettings["sidebar"]) {
                     paginate: {
                         previous: "<i class='mdi mdi-chevron-left'>",
                         next: "<i class='mdi mdi-chevron-right'>"
-                    }
+                    },
+                    infoFiltered: ""
                 },
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
@@ -176,7 +170,12 @@ if ($rSettings["sidebar"]) {
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,4,5,6,7]}
+                    {"className": "dt-center", "targets": [0,4,5,6,7]},
+                    <?php if ($rPermissions["is_admin"]) { ?>
+                    {"visible": false, "targets": [8]}
+                    <?php } else { ?>
+                    {"visible": false, "targets": [3,8]}
+                    <?php } ?>
                 ],
             });
             <?php if (!$detect->isMobile()) { ?>

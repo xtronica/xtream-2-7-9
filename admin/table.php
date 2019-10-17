@@ -6,6 +6,8 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 if (!isset($_SESSION['user_id'])) { exit; }
 
+$joinQuery = "";
+
 if ($_GET["id"] == "users") {
     $rRegisteredUsers = getRegisteredUsernames();
     $rActivity = Array();
@@ -26,7 +28,11 @@ if ($_GET["id"] == "users") {
     $table = 'users';
     $get = $_GET["id"];
     $primaryKey = 'id';
-    $extraWhere = "`is_mag` = 0 AND `is_e2` = 0";
+    if ($rPermissions["is_admin"]) {
+        $extraWhere = "`is_mag` = 0 AND `is_e2` = 0";
+    } else {
+        $extraWhere = "`is_mag` = 0 AND `is_e2` = 0 AND `member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
 
     $columns = array(
         array('db' => 'id', 'dt' => 0),
@@ -41,10 +47,10 @@ if ($_GET["id"] == "users") {
         array('db' => 'admin_enabled', 'dt' => 4,
             'formatter' => function( $d, $row ) {
                 if ($d == 0) {
-                    return "BANNED";
+                    return '<i class="text-danger fas fa-circle"></i>';
                 } else {
                     if ($row["enabled"] == 0) {
-                        return '<i class="text-danger fas fa-circle"></i>';
+                        return '<i class="text-secondary fas fa-circle"></i>';
                     } else if (($row["exp_date"]) && ($row["exp_date"] < time())) {
                         return '<i class="text-warning far fa-circle"></i>';
                     } else {
@@ -63,12 +69,21 @@ if ($_GET["id"] == "users") {
                 }
             }
         ),
-        array('db' => 'exp_date', 'dt' => 6,
+        array('db' => 'is_trial', 'dt' => 6,
             'formatter' => function( $d, $row ) {
-                if ($d) { return date("Y-m-d", $d); } else { return "Unlimited"; }
+                if ($d) {
+                    return '<i class="text-warning fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-secondary far fa-circle"></i>';
+                }
             }
         ),
-        array('db' => 'max_connections', 'dt' => 7,
+        array('db' => 'exp_date', 'dt' => 7,
+            'formatter' => function( $d, $row ) {
+                if ($d) { return date("Y-m-d", $d); } else { return "Never"; }
+            }
+        ),
+        array('db' => 'max_connections', 'dt' => 8,
             'formatter' => function( $d, $row ) {
                 global $rActivity;
                 if (isset($rActivity[intval($row["id"])])) {
@@ -80,7 +95,7 @@ if ($_GET["id"] == "users") {
                 return "<a href=\"./live_connections.php?user_id=".$row["id"]."\">".$val." / ".$d."</a>";
             }
         ),
-        array('db' => 'max_connections', 'dt' => 8,
+        array('db' => 'max_connections', 'dt' => 9,
             'formatter' => function( $d, $row ) {
                 global $rLastActivity;
                 if (isset($rLastActivity[intval($row["id"])])) {
@@ -90,26 +105,44 @@ if ($_GET["id"] == "users") {
                 }
             }
         ),
-        array('db' => 'id', 'dt' => 9,
+        array('db' => 'id', 'dt' => 10,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
-                $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="download(\''.$row["username"].'\', \''.$row["password"].'\');""><i class="mdi mdi-download"></i></button>';
-                $rButtons .= '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$d.', \'kill\');""><i class="fas fa-hammer"></i></button>';
-                if ($row["admin_enabled"] == 1) {
-                    // Overkill, remove for now, leave unban button just incase.
-                    //$rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'ban\');""><i class="mdi mdi-power"></i></button>';
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    $rButtons = '<a href="./user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
                 } else {
-                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'unban\');""><i class="mdi mdi-power"></i></button>';
+                    $rButtons = '<a href="./user_reseller.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
+                }
+                if ((($rPermissions["is_reseller"]) && ($rPermissions["allow_download"])) OR ($rPermissions["is_admin"])) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="download(\''.$row["username"].'\', \''.$row["password"].'\');"><i class="mdi mdi-download"></i></button>
+                    ';
+                }
+                $rButtons .= '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$d.', \'kill\');"><i class="fas fa-hammer"></i></button>
+                ';
+                if ($row["admin_enabled"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'ban\');"><i class="mdi mdi-power"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$d.', \'unban\');"><i class="mdi mdi-power"></i></button>
+                    ';
                 }
                 if ($row["enabled"] == 1) {
-                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'disable\');""><i class="mdi mdi-lock"></i></button>';
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'disable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
                 } else {
-                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'enable\');""><i class="mdi mdi-lock"></i></button>';
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'enable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
                 }
-                $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');""><i class="mdi mdi-close"></i></button>';
+                if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');"><i class="mdi mdi-close"></i></button>';
+                }
                 return $rButtons;
             }
         ),
+        array('db' => 'admin_notes', 'dt' => 11),
+        array('db' => 'reseller_notes', 'dt' => 12),
         array('db' => 'enabled', 'hide' => true),
         array('db' => 'exp_date', 'hide' => true),
     );
@@ -119,7 +152,12 @@ if ($_GET["id"] == "users") {
     $table = 'reg_users';
     $get = $_GET["id"];
     $primaryKey = 'id';
-    $extraWhere = "";
+    
+    if ($rPermissions["is_admin"]) {
+        $extraWhere = "";
+    } else {
+        $extraWhere = "`owner_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
 
     $columns = array(
         array('db' => 'id', 'dt' => 0),
@@ -137,19 +175,11 @@ if ($_GET["id"] == "users") {
                 if ($d == 1) {
                     return '<i class="text-success fas fa-circle"></i>';
                 } else {
-                    return '<i class="text-warning far fa-circle"></i>';
+                    return '<i class="text-danger fas fa-circle"></i>';
                 }
             }
         ),
-        array('db' => 'verified', 'dt' => 6,
-            'formatter' => function( $d, $row ) {
-                if ($d == 1) {
-                    return '<i class="text-success fas fa-circle"></i>';
-                } else {
-                    return '<i class="text-warning far fa-circle"></i>';
-                }
-            }
-        ),
+        array('db' => 'credits', 'dt' => 6),
         array('db' => 'last_login', 'dt' => 7,
             'formatter' => function( $d, $row ) {
                 if ($d) {
@@ -161,18 +191,34 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 8,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<a href="./reg_user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
-                if ($row["status"] == 1) {
-                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'disable\');""><i class="mdi mdi-lock"></i></button>';
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    $rButtons = '<a href="./reg_user.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
                 } else {
-                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'enable\');""><i class="mdi mdi-lock"></i></button>';
+                    $rButtons = '<a href="./credits_add.php?id='.$d.'"><button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs"><i class="fe-dollar-sign"></i></button></a>
+                    ';
+                    $rButtons .= '<a href="./subreseller.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
                 }
-                $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');""><i class="mdi mdi-close"></i></button>';
+                if ($row["status"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'disable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$d.', \'enable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                }
+                if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');"><i class="mdi mdi-close"></i></button>
+                    ';
+                }
                 return $rButtons;
             }
-        )
+        ),
+        array('db' => 'notes', 'dt' => 9)
     );
 } else if ($_GET["id"] == "live_connections") {
+    if (($rPermissions["is_reseller"]) && (!$rPermissions["reseller_client_connection_logs"])) { exit; }
     $rRegisteredUsers = getRegisteredUsernames();
     $rChannels = getChannels();
     $rStreamingServers = getStreamingServers();
@@ -186,117 +232,404 @@ if ($_GET["id"] == "users") {
     $table = 'user_activity_now';
     $get = $_GET["activity_id"];
     $primaryKey = 'activity_id';
-    if (isset($_GET["server_id"])) {
-        $extraWhere = "`server_id` = ".intval($_GET["server_id"]);
+    
+    $joinQuery = "FROM user_activity_now AS `a` INNER JOIN `users` AS `u` ON `a`.`user_id` = `u`.`id`";
+    
+    if ((isset($_GET["server_id"])) && ($rPermissions["is_admin"])) {
+        $extraWhere = "`a`.`server_id` = ".intval($_GET["server_id"]);
     } else if (isset($_GET["stream_id"])) {
-        $extraWhere = "`stream_id` = ".intval($_GET["stream_id"]);
+        $extraWhere = "`a`.`stream_id` = ".intval($_GET["stream_id"]);
     } else if (isset($_GET["user_id"])) {
-        $extraWhere = "`user_id` = ".intval($_GET["user_id"]);
+        $extraWhere = "`a`.`user_id` = ".intval($_GET["user_id"]);
     } else {
         $extraWhere = "";
     }
+    if ($rPermissions["is_reseller"]) {
+        if (strlen($extraWhere) > 0) {
+            $extraWhere .= " AND ";
+        }
+        $extraWhere .= "`u`.`member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
     $columns = array(
-        array('db' => 'divergence', 'dt' => 0,
+        array('db' => 'a.divergence', 'dt' => 0,
             'formatter' => function( $d, $row ) {
-                if ($d <= 15) {
+                if ($row["divergence"] <= 10) {
                     return '<i class="text-success fas fa-circle"></i>';
-                } else if ($d <= 50) {
+                } else if ($row["divergence"] <= 50) {
                     return '<i class="text-warning fas fa-circle"></i>';
                 } else {
                     return '<i class="text-danger fas fa-circle"></i>';
                 }
             }
         ),
-        array('db' => 'user_id', 'dt' => 1,
+        array('db' => 'a.user_id', 'dt' => 1,
             'formatter' => function( $d, $row ) {
-                return "<a href='./user.php?id=".$d."'>".getUser(intval($d))["username"]."</a>";
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./user.php?id=".$row["user_id"]."'>".getUser(intval($row["user_id"]))["username"]."</a>";
+                } else {
+                    return "<a href='./user_reseller.php?id=".$row["user_id"]."'>".getUser(intval($row["user_id"]))["username"]."</a>";
+                }
             }
         ),
-        array('db' => 'stream_id', 'dt' => 2,
+        array('db' => 'a.stream_id', 'dt' => 2,
             'formatter' => function( $d, $row ) {
-                return "<a href='./stream.php?id=".$d."'>".getChannelsByID(intval($d))["stream_display_name"]."</a>";
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./stream.php?id=".$row["stream_id"]."'>".getChannelsByID(intval($row["stream_id"]))["stream_display_name"]."</a>";
+                } else {
+                    return getChannelsByID(intval($row["stream_id"]))["stream_display_name"];
+                }
             }
         ),
-        array('db' => 'server_id', 'dt' => 3,
+        array('db' => 'a.server_id', 'dt' => 3,
             'formatter' => function( $d, $row ) {
-                return "<a href='./server.php?id=".$d."'>".getStreamingServersByID(intval($d))["server_name"]."</a>";
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./server.php?id=".$row["server_id"]."'>".getStreamingServersByID(intval($row["server_id"]))["server_name"]."</a>";
+                } else {
+                    return "";
+                }
             }
         ),
-        array('db' => 'user_ip', 'dt' => 4,
+        array('db' => 'a.user_ip', 'dt' => 4,
             'formatter' => function( $d, $row ) {
-                if ($d) { return "<a target='_blank' href='https://www.ip-tracker.org/locator/ip-lookup.php?ip=".$d."'>".$d."</a>"; }
+                if ($row["user_ip"]) { return "<a target='_blank' href='https://www.ip-tracker.org/locator/ip-lookup.php?ip=".$row["user_ip"]."'>".$row["user_ip"]."</a>"; }
             }
         ),
-        array('db' => 'user_id', 'dt' => 5,
+        array('db' => 'a.user_id', 'dt' => 5,
             'formatter' => function( $d, $row ) {
                 global $rActivity;
-                $max = getUser(intval($d))["max_connections"];
+                $max = getUser(intval($row["user_id"]))["max_connections"];
                 if ($max == 0) {
                     $max = "&infin;";
                 }
-                return $rActivity[intval($d)]." / ".$max;
+                return $rActivity[intval($row["user_id"])]." / ".$max;
             }
         ),
-        array('db' => 'geoip_country_code', 'dt' => 6,
+        array('db' => 'a.geoip_country_code', 'dt' => 6,
             'formatter' => function( $d, $row ) {
-                return "<img src='https://www.ip-tracker.org/images/ip-flags/".strtolower($d).".png'></img>";
+                return "<img src='https://www.ip-tracker.org/images/ip-flags/".strtolower($row["geoip_country_code"]).".png'></img>";
             }
         ),
-        array('db' => 'pid', 'dt' => 7,
+        array('db' => 'a.pid', 'dt' => 7,
             'formatter' => function( $d, $row ) {
-                return '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$d.', \'kill\');""><i class="fas fa-hammer"></i></button>';
+                return '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs" onClick="api('.$row["pid"].', \'kill\');"><i class="fas fa-hammer"></i></button>';
             }
         ),
-    );    
-} else if ($_GET["id"] == "mags") {
-    $table = 'mag_devices';
-    $get = $_GET["id"];
-    $primaryKey = 'mag_id';
-    $extraWhere = "";
-
-    $columns = array(
-        array('db' => 'mag_id', 'dt' => 0),
-        array('db' => 'mac', 'dt' => 1,
+        array('db' => 'u.member_id', 'dt' => 8,
             'formatter' => function( $d, $row ) {
-                return base64_decode($d);
-            }
-        ),
-        array('db' => 'user_id', 'dt' => 2,
-            'formatter' => function( $d, $row ) {
-                return "<a href='./user.php?id=".$d."'>".getUser(intval($d))["username"]."</a>";
-            }
-        ),
-        array('db' => 'mag_id', 'dt' => 3,
-            'formatter' => function( $d, $row ) {
-                $rButtons = '<a href="./mag.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
-                $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');""><i class="mdi mdi-close"></i></button>';
-                return $rButtons;
+                return $row["member_id"];
             }
         )
+    );
+} else if ($_GET["id"] == "user_activity") {
+    if (($rPermissions["is_reseller"]) && (!$rPermissions["reseller_client_connection_logs"])) { exit; }
+    $rRegisteredUsers = getRegisteredUsernames();
+    $rChannels = getChannels();
+    $rStreamingServers = getStreamingServers();
+
+    $table = 'user_activity';
+    $get = $_GET["activity_id"];
+    $primaryKey = 'activity_id';
+    
+    $joinQuery = "FROM user_activity AS `a` INNER JOIN `users` AS `u` ON `a`.`user_id` = `u`.`id`";
+    
+    if ((isset($_GET["server_id"])) && ($rPermissions["is_admin"])) {
+        $extraWhere = "`a`.`server_id` = ".intval($_GET["server_id"]);
+    } else if (isset($_GET["stream_id"])) {
+        $extraWhere = "`a`.`stream_id` = ".intval($_GET["stream_id"]);
+    } else if (isset($_GET["user_id"])) {
+        $extraWhere = "`a`.`user_id` = ".intval($_GET["user_id"]);
+    } else {
+        $extraWhere = "";
+    }
+    if ($rPermissions["is_reseller"]) {
+        if (strlen($extraWhere) > 0) {
+            $extraWhere .= " AND ";
+        }
+        $extraWhere .= "`u`.`member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
+    $columns = array(
+        array('db' => 'a.activity_id', 'dt' => 0,
+            'formatter' => function( $d, $row ) {
+                return $row["activity_id"];
+            }
+        ),
+        array('db' => 'a.user_id', 'dt' => 1,
+            'formatter' => function( $d, $row ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./user.php?id=".$row["user_id"]."'>".getUser(intval($row["user_id"]))["username"]."</a>";
+                } else {
+                    return "<a href='./user_reseller.php?id=".$row["user_id"]."'>".getUser(intval($row["user_id"]))["username"]."</a>";
+                }
+            }
+        ),
+        array('db' => 'a.stream_id', 'dt' => 2,
+            'formatter' => function( $d, $row ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./stream.php?id=".$row["stream_id"]."'>".getChannelsByID(intval($row["stream_id"]))["stream_display_name"]."</a>";
+                } else {
+                    return getChannelsByID(intval($row["stream_id"]))["stream_display_name"];
+                }
+            }
+        ),
+        array('db' => 'a.server_id', 'dt' => 3,
+            'formatter' => function( $d, $row ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<a href='./server.php?id=".$row["server_id"]."'>".getStreamingServersByID(intval($row["server_id"]))["server_name"]."</a>";
+                } else {
+                    return "";
+                }
+            }
+        ),
+        array('db' => 'a.date_start', 'dt' => 4,
+            'formatter' => function( $d, $row ) {
+                return date("Y-m-d H:i:s", $row["date_start"]);
+            }
+        ),
+        array('db' => 'a.date_end', 'dt' => 5,
+            'formatter' => function( $d, $row ) {
+                return date("Y-m-d H:i:s", $row["date_end"]);
+            }
+        ),
+        array('db' => 'a.user_ip', 'dt' => 6,
+            'formatter' => function( $d, $row ) {
+                if ($row["user_ip"]) { return "<a target='_blank' href='https://www.ip-tracker.org/locator/ip-lookup.php?ip=".$row["user_ip"]."'>".$row["user_ip"]."</a>"; }
+            }
+        ),
+        array('db' => 'a.geoip_country_code', 'dt' => 7,
+            'formatter' => function( $d, $row ) {
+                return "<img src='https://www.ip-tracker.org/images/ip-flags/".strtolower($row["geoip_country_code"]).".png'></img>";
+            }
+        ),
+        array('db' => 'u.member_id', 'dt' => 8,
+            'formatter' => function( $d, $row ) {
+                return $row["member_id"];
+            }
+        )
+    );
+} else if ($_GET["id"] == "mags") {
+    $rRegisteredUsers = getRegisteredUsernames();
+
+    $table = 'users';
+    $get = $_GET["id"];
+    $primaryKey = 'id';
+    if ($rPermissions["is_admin"]) {
+        $extraWhere = "`is_mag` = 1";
+    } else {
+        $extraWhere = "`is_mag` = 1 AND `member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
+    $joinQuery = "FROM `users` AS `u` INNER JOIN `mag_devices` AS `m` ON `m`.`user_id` = `u`.`id`";
+
+    $columns = array(
+        array('db' => 'u.id', 'dt' => 0,
+            'formatter' => function( $d, $row ) {
+                return $row["id"];
+            }
+        ),
+        array('db' => 'u.username', 'dt' => 1,
+            'formatter' => function( $d, $row ) {
+                return $row["username"];
+            }
+        ),
+        array('db' => 'm.mac', 'dt' => 2,
+            'formatter' => function( $d, $row ) {
+                return base64_decode($row["mac"]);
+            }
+        ),
+        array('db' => 'u.member_id', 'dt' => 3,
+            'formatter' => function( $d, $row ) {
+                global $rRegisteredUsers;
+                return $rRegisteredUsers[intval($row["member_id"])];
+            }
+        ),
+        array('db' => 'u.admin_enabled', 'dt' => 4,
+            'formatter' => function( $d, $row ) {
+                if ($row["admin_enabled"] == 0) {
+                    return '<i class="text-danger fas fa-circle"></i>';
+                } else {
+                    if ($row["enabled"] == 0) {
+                        return '<i class="text-secondary fas fa-circle"></i>';
+                    } else if (($row["exp_date"]) && ($row["exp_date"] < time())) {
+                        return '<i class="text-warning far fa-circle"></i>';
+                    } else {
+                        return '<i class="text-success fas fa-circle"></i>';
+                    }
+                }
+            }
+        ),
+        array('db' => 'u.id', 'dt' => 5,
+            'formatter' => function( $d, $row ) {
+                global $rActivity;
+                if (isset($rActivity[intval($row["id"])])) {
+                    return '<i class="text-success fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-warning far fa-circle"></i>';
+                }
+            }
+        ),
+        array('db' => 'u.is_trial', 'dt' => 6,
+            'formatter' => function( $d, $row ) {
+                if ($row["is_trial"]) {
+                    return '<i class="text-warning fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-secondary far fa-circle"></i>';
+                }
+            }
+        ),
+        array('db' => 'u.exp_date', 'dt' => 7,
+            'formatter' => function( $d, $row ) {
+                if ($row["exp_date"]) { return date("Y-m-d", $row["exp_date"]); } else { return "Never"; }
+            }
+        ),
+        array('db' => 'u.id', 'dt' => 8,
+            'formatter' => function( $d, $row ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    $rButtons = '<a href="./user.php?id='.$row["id"].'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
+                } else {
+                    $rButtons = '<a href="./user_reseller.php?id='.$row["id"].'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
+                }
+                if ($row["admin_enabled"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'ban\');"><i class="mdi mdi-power"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'unban\');"><i class="mdi mdi-power"></i></button>
+                    ';
+                }
+                if ($row["enabled"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'disable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'enable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                }
+                if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'delete\');"><i class="mdi mdi-close"></i></button>';
+                }
+                return $rButtons;
+            }
+        ),
+        array('db' => 'u.admin_notes', 'dt' => 9),
+        array('db' => 'u.reseller_notes', 'dt' => 10),
+        array('db' => 'u.enabled', 'hide' => true)
     );
 } else if ($_GET["id"] == "enigmas") {
-    $table = 'enigma2_devices';
+    $rRegisteredUsers = getRegisteredUsernames();
+
+    $table = 'users';
     $get = $_GET["id"];
-    $primaryKey = 'device_id';
-    $extraWhere = "";
+    $primaryKey = 'id';
+    if ($rPermissions["is_admin"]) {
+        $extraWhere = "`is_e2` = 1";
+    } else {
+        $extraWhere = "`is_e2` = 1 AND `member_id` IN (".join(",", array_keys(getRegisteredUsers($rUserInfo["id"]))).")";
+    }
+    $joinQuery = "FROM `users` AS `u` INNER JOIN `enigma2_devices` AS `m` ON `m`.`user_id` = `u`.`id`";
 
     $columns = array(
-        array('db' => 'device_id', 'dt' => 0),
-        array('db' => 'mac', 'dt' => 1),
-        array('db' => 'user_id', 'dt' => 2,
+        array('db' => 'u.id', 'dt' => 0,
             'formatter' => function( $d, $row ) {
-                return "<a href='./user.php?id=".$d."'>".getUser(intval($d))["username"]."</a>";
+                return $row["id"];
             }
         ),
-        array('db' => 'device_id', 'dt' => 3,
+        array('db' => 'u.username', 'dt' => 1,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<a href="./enigma.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>';
-                $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');""><i class="mdi mdi-close"></i></button>';
+                return $row["username"];
+            }
+        ),
+        array('db' => 'm.mac', 'dt' => 2,
+            'formatter' => function( $d, $row ) {
+                return $row["mac"];
+            }
+        ),
+        array('db' => 'u.member_id', 'dt' => 3,
+            'formatter' => function( $d, $row ) {
+                global $rRegisteredUsers;
+                return $rRegisteredUsers[intval($row["member_id"])];
+            }
+        ),
+        array('db' => 'u.admin_enabled', 'dt' => 4,
+            'formatter' => function( $d, $row ) {
+                if ($row["admin_enabled"] == 0) {
+                    return '<i class="text-danger fas fa-circle"></i>';
+                } else {
+                    if ($row["enabled"] == 0) {
+                        return '<i class="text-secondary fas fa-circle"></i>';
+                    } else if (($row["exp_date"]) && ($row["exp_date"] < time())) {
+                        return '<i class="text-warning far fa-circle"></i>';
+                    } else {
+                        return '<i class="text-success fas fa-circle"></i>';
+                    }
+                }
+            }
+        ),
+        array('db' => 'u.id', 'dt' => 5,
+            'formatter' => function( $d, $row ) {
+                global $rActivity;
+                if (isset($rActivity[intval($row["id"])])) {
+                    return '<i class="text-success fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-warning far fa-circle"></i>';
+                }
+            }
+        ),
+        array('db' => 'u.is_trial', 'dt' => 6,
+            'formatter' => function( $d, $row ) {
+                if ($row["is_trial"]) {
+                    return '<i class="text-warning fas fa-circle"></i>';
+                } else {
+                    return '<i class="text-secondary far fa-circle"></i>';
+                }
+            }
+        ),
+        array('db' => 'u.exp_date', 'dt' => 7,
+            'formatter' => function( $d, $row ) {
+                if ($row["exp_date"]) { return date("Y-m-d", $row["exp_date"]); } else { return "Never"; }
+            }
+        ),
+        array('db' => 'u.id', 'dt' => 8,
+            'formatter' => function( $d, $row ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    $rButtons = '<a href="./user.php?id='.$row["id"].'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
+                } else {
+                    $rButtons = '<a href="./user_reseller.php?id='.$row["id"].'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    ';
+                }
+                if ($row["admin_enabled"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'ban\');"><i class="mdi mdi-power"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'unban\');"><i class="mdi mdi-power"></i></button>
+                    ';
+                }
+                if ($row["enabled"] == 1) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'disable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                } else {
+                    $rButtons .= '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'enable\');"><i class="mdi mdi-lock"></i></button>
+                    ';
+                }
+                if ((($rPermissions["is_reseller"]) && ($rPermissions["delete_users"])) OR ($rPermissions["is_admin"])) {
+                    $rButtons .= '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$row["id"].', \'delete\');"><i class="mdi mdi-close"></i></button>';
+                }
                 return $rButtons;
             }
-        )
+        ),
+        array('db' => 'u.admin_notes', 'dt' => 9),
+        array('db' => 'u.reseller_notes', 'dt' => 10),
+        array('db' => 'u.enabled', 'hide' => true)
     );
 } else if ($_GET["id"] == "mag_events") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $table = 'mag_events';
     $get = $_GET["id"];
     $primaryKey = 'id';
@@ -318,7 +651,7 @@ if ($_GET["id"] == "users") {
         array('db' => 'msg', 'dt' => 4),
         array('db' => 'id', 'dt' => 5,
             'formatter' => function( $d, $row ) {
-                $rButtons = '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');""><i class="mdi mdi-close"></i></button>';
+                $rButtons = '<button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', \'delete\');"><i class="mdi mdi-close"></i></button>';
                 return $rButtons;
             }
         )
@@ -341,18 +674,33 @@ if ($_GET["id"] == "users") {
                 return $d;
             }
         ),
-        array('db' => 'stream_display_name', 'dt' => 1),
-        array('db' => 'category_id', 'dt' => 2,
+        array('db' => 'stream_display_name', 'dt' => 1,
             'formatter' => function( $d, $row, $server ) {
                 global $rCategories;
-                return $rCategories[$d]["category_name"];
+                $rCategory = empty($rCategories[$row["category_id"]]["category_name"]) ? 'No Category' : $rCategories[$row["category_id"]]["category_name"];
+                $rCategory = "<span style='font-size:11px;color: #057f91;'>{$rCategory}</span>";
+                return "<b>".$row['stream_display_name']."</b><br>".$rCategory."";
+            }
+        ),
+        array('db' => 'id', 'dt' => 2,
+            'formatter' => function( $d, $row, $server ) {
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    return "<span style='font-size:11px;color: #057f91;'>".parse_url($server["current_source"])['host']."</span>";
+                } else {
+                    return "";
+                }
             }
         ),
         array('db' => 'id', 'dt' => 3,
             'formatter' => function( $d, $row, $server ) {
-                global $rServers;
+                global $rServers, $rPermissions;
                 if (isset($rServers[$server["server_id"]]["server_name"])) {
-                    return $rServers[$server["server_id"]]["server_name"];
+                    if ($rPermissions["is_admin"]) {
+                        return $rServers[$server["server_id"]]["server_name"];
+                    } else {
+                        return "Server #".$server["server_id"];
+                    }
                 } else {
                     return "No Server Selected";
                 }
@@ -365,42 +713,62 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 5,
             'formatter' => function( $d, $row, $server ) {
-                global $rStatusArray;
-                if ($server["actual_status"] == 1) {
-                    return $server["uptime_text"];
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    global $rStatusArray;
+                    if ($server["actual_status"] == 1) {
+                        return $server["uptime_text"];
+                    } else {
+                        return $rStatusArray[$server["actual_status"]];
+                    }
                 } else {
-                    return $rStatusArray[$server["actual_status"]];
+                    return "";
                 }
             }
         ),
         array('db' => 'id', 'dt' => 6,
             'formatter' => function( $d, $row, $server ) {
-                if ((intval($server["actual_status"]) == 1) OR ($server["on_demand"] == 1) OR ($server["actual_status"] == 5)) { $rStatusA = " style=\"display:none;\""; } else { $rStatusA = ""; }
-                if (intval($server["actual_status"]) <> 1) { $rStatusB = " style=\"display:none;\""; } else { $rStatusB = ""; }
-                if (!$server["server_id"]) { $server["server_id"] = 0; }
-                return '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs api-start" onClick="api('.$d.', '.$server["server_id"].', \'start\');"'.$rStatusA.'><i class="mdi mdi-play"></i></button>
-                <button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs api-stop" onClick="api('.$d.', '.$server["server_id"].', \'stop\');"'.$rStatusB.'><i class="mdi mdi-stop"></i></button>
-                <button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs api-restart" onClick="api('.$d.', '.$server["server_id"].', \'restart\');"'.$rStatusB.'><i class="mdi mdi-refresh"></i></button>
-                <a href="./stream.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
-                <button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', '.$server["server_id"].', \'delete\');"><i class="mdi mdi-close"></i></button>';
+                global $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    if (!$server["server_id"]) { $server["server_id"] = 0; }
+                    if ((intval($server["actual_status"]) == 1) OR (intval($server["actual_status"]) == 3) OR ($server["on_demand"] == 1) OR ($server["actual_status"] == 5)) { 
+                        $rButtons = '<button type="button" class="btn btn-outline-warning waves-effect waves-light btn-xs api-stop" onClick="api('.$d.', '.$server["server_id"].', \'stop\');"><i class="mdi mdi-stop"></i></button>
+                        ';
+                        $rStatus = '';
+                    } else {
+                        $rButtons = '<button type="button" class="btn btn-outline-success waves-effect waves-light btn-xs api-start" onClick="api('.$d.', '.$server["server_id"].', \'start\');"><i class="mdi mdi-play"></i></button>
+                        ';
+                        $rStatus = ' disabled';
+                    }
+                    $rButtons .= '<button type="button" class="btn btn-outline-primary waves-effect waves-light btn-xs api-restart" onClick="api('.$d.', '.$server["server_id"].', \'restart\');"'.$rStatus.'><i class="mdi mdi-refresh"></i></button>
+                    <a href="./stream.php?id='.$d.'"><button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs"><i class="mdi mdi-pencil-outline"></i></button></a>
+                    <button type="button" class="btn btn-outline-danger waves-effect waves-light btn-xs" onClick="api('.$d.', '.$server["server_id"].', \'delete\');"><i class="mdi mdi-close"></i></button>';
+                    return $rButtons;
+                } else {
+                    return "";
+                }
             }
         ),
         array('db' => 'id', 'dt' => 7,
             'formatter' => function( $d, $row, $server ) {
-                if ((intval($server["actual_status"]) == 1) OR ($server["on_demand"] == 1) OR ($server["actual_status"] == 5)) {
-                    return '<button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs" onClick="player('.$d.');"><i class="mdi mdi-play"></i></button>';
-                } else {
-                    return '<button type="button" disabled class="btn btn-outline-secondary waves-effect waves-light btn-xs"><i class="mdi mdi-play"></i></button>';
+                global $rAdminSettings, $rPermissions;
+                if ($rPermissions["is_admin"]) {
+                    if (((intval($server["actual_status"]) == 1) OR ($server["on_demand"] == 1) OR ($server["actual_status"] == 5)) && ((strlen($rAdminSettings["admin_username"]) > 0) && (strlen($rAdminSettings["admin_password"]) > 0))) {
+                        return '<button type="button" class="btn btn-outline-info waves-effect waves-light btn-xs" onClick="player('.$d.');"><i class="mdi mdi-play"></i></button>';
+                    } else {
+                        return '<button type="button" disabled class="btn btn-outline-secondary waves-effect waves-light btn-xs"><i class="mdi mdi-play"></i></button>';
+                    }
                 }
             }
         ),
-        array('db' => 'id', 'dt' => 8,
+        array('db' => 'category_id', 'dt' => 8,
             'formatter' => function( $d, $row, $server ) {
                 return $server["stream_text"];
             }
         )
     );
 } else if ($_GET["id"] == "bouquets_streams") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $table = 'streams';
     $get = $_GET["id"];
     $primaryKey = 'id';
@@ -420,12 +788,13 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 3,
             'formatter' => function( $d, $row) {
-                return '<button type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'stream\');"><i class="mdi mdi-minus"></i></button>
-                <button type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'stream\');"><i class="mdi mdi-plus"></i></button>';
+                return '<button data-id="'.$d.'" data-type="stream" type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'stream\', true);"><i class="mdi mdi-minus"></i></button>
+                <button data-id="'.$d.'" data-type="stream" type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'stream\', true);"><i class="mdi mdi-plus"></i></button>';
             }
         )
     );
 } else if ($_GET["id"] == "streams_short") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $table = 'streams';
     $get = $_GET["id"];
     $primaryKey = 'id';
@@ -444,6 +813,7 @@ if ($_GET["id"] == "users") {
         )
     );
 } else if ($_GET["id"] == "movies_short") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $table = 'streams';
     $get = $_GET["id"];
     $primaryKey = 'id';
@@ -462,6 +832,7 @@ if ($_GET["id"] == "users") {
         )
     );
 } else if ($_GET["id"] == "bouquets_vod") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $rCategoriesVOD = getCategories("movie");
     $table = 'streams';
     $get = $_GET["id"];
@@ -482,12 +853,13 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 3,
             'formatter' => function( $d, $row) {
-                return '<button type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'vod\');"><i class="mdi mdi-minus"></i></button>
-                <button type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'vod\');"><i class="mdi mdi-plus"></i></button>';
+                return '<button data-id="'.$d.'" data-type="vod" type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'vod\', true);"><i class="mdi mdi-minus"></i></button>
+                <button data-id="'.$d.'" data-type="vod" type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'vod\', true);"><i class="mdi mdi-plus"></i></button>';
             }
         )
     );
 } else if ($_GET["id"] == "bouquets_series") {
+    if (!$rPermissions["is_admin"]) { exit; }
     $rCategoriesVOD = getCategories("series");
     $table = 'series';
     $get = $_GET["id"];
@@ -508,8 +880,8 @@ if ($_GET["id"] == "users") {
         ),
         array('db' => 'id', 'dt' => 3,
             'formatter' => function( $d, $row) {
-                return '<button type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'series\');"><i class="mdi mdi-minus"></i></button>
-                <button type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'series\');"><i class="mdi mdi-plus"></i></button>';
+                return '<button data-id="'.$d.'" data-type="series" type="button" style="display: none;" class="btn-remove btn btn-outline-danger waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'series\', true);"><i class="mdi mdi-minus"></i></button>
+                <button data-id="'.$d.'" data-type="series" type="button" style="display: none;" class="btn-add btn btn-outline-info waves-effect waves-light btn-xs" onClick="toggleBouquet('.$d.', \'series\', true);"><i class="mdi mdi-plus"></i></button>';
             }
         )
     );
@@ -716,7 +1088,7 @@ class SSP {
         $limit = SSP::limit( $request, $columns );
         $order = SSP::order( $request, $columns, $joinQuery );
         $where = SSP::filter( $request, $columns, $bindings, $joinQuery, $table);
-		// IF Extra where set then set and prepare query
+        // IF Extra where set then set and prepare query
         if($extraWhere)
             $extraWhere = ($where) ? ' AND '.$extraWhere : ' WHERE '.$extraWhere;
         $groupBy = ($groupBy) ? ' GROUP BY '.$groupBy .' ' : '';
@@ -725,22 +1097,22 @@ class SSP {
         if($joinQuery){
             $col = SSP::pluck($columns, 'db', $joinQuery);
             $query =  "SELECT SQL_CALC_FOUND_ROWS ".implode(", ", $col)."
-			 $joinQuery
-			 $where
-			 $extraWhere
-			 $groupBy
+             $joinQuery
+             $where
+             $extraWhere
+             $groupBy
        $having
-			 $order
-			 $limit";
+             $order
+             $limit";
         }else{
             $query =  "SELECT SQL_CALC_FOUND_ROWS `".implode("`, `", SSP::pluck($columns, 'db'))."`
-			 FROM `$table`
-			 $where
-			 $extraWhere
-			 $groupBy
+             FROM `$table`
+             $where
+             $extraWhere
+             $groupBy
        $having
-			 $order
-			 $limit";
+             $order
+             $limit";
         }
         $data = SSP::sql_exec( $db, $bindings,$query);
         // Data set length after filtering
@@ -751,9 +1123,13 @@ class SSP {
         // Total data set length
         $resTotalLength = SSP::sql_exec( $db,
             "SELECT COUNT(`{$primaryKey}`)
-			 FROM   `$table`"
+             FROM   `$table`"
         );
-        $recordsTotal = $resTotalLength[0][0];
+        if ($rPermissions["is_admin"]) {
+            $recordsTotal = $resTotalLength[0][0];
+        } else {
+            $recordsTotal = $recordsFiltered;
+        }
         /*
          * Output
          */
@@ -886,5 +1262,5 @@ class SSP {
     }
 }
 
-echo json_encode(SSP::simple($_GET, $sql_details, $table, $primaryKey, $columns, "", $extraWhere));
+echo json_encode(SSP::simple($_GET, $sql_details, $table, $primaryKey, $columns, $joinQuery, $extraWhere));
 ?>

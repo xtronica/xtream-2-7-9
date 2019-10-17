@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_epg"])) {
     $rArray = Array("epg_name" => "", "epg_file" => "", "days_keep" => 7, "data" => "");

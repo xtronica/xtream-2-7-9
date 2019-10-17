@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 $rCategories = getCategories();
 

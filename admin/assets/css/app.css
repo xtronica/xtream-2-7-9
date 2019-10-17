@@ -409,6 +409,9 @@ body{
 .boxed-layout .container-fluid{
     max-width:840px
 }
+.boxed-layout-ext .container-fluid{
+    max-width:1040px
+}
 .logo{
     display:block;
     line-height:70px
@@ -3352,7 +3355,7 @@ body.authentication-bg-pattern{
     .timeline-item.timeline-item-left:after{
         content:"";
         display:block;
-        width:50%
+        width:50%;
     }
     .timeline-item.timeline-item-left .timeline-desk .arrow-alt{
         border-bottom:12px solid transparent;
@@ -3714,6 +3717,9 @@ body.authentication-bg-pattern{
 .dt-center {
     text-align: center;
 }
+.vertical-align {
+	vertical-align: middle;
+}
 .dataTables_processing {
     display: none !important;
 }
@@ -3775,8 +3781,6 @@ body.authentication-bg-pattern{
 .copyright a {
     font-weight: bold;
     color: white;
-<<<<<<< Updated upstream
-=======
 }
 .timeline-item-left p, .timeline-item-left h4 {
     text-align: left !important;
@@ -3789,5 +3793,4 @@ body.authentication-bg-pattern{
 }
 .expired {
     color: #e57373 !important;
->>>>>>> Stashed changes
 }

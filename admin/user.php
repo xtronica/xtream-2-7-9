@@ -1,6 +1,7 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_user"])) {
     $_POST["mac_address_mag"] = strtoupper($_POST["mac_address_mag"]);
@@ -10,14 +11,6 @@ if (isset($_POST["submit_user"])) {
         unset($rArray["id"]);
     } else {
         $rArray = Array("member_id" => 0, "username" => "", "password" => "", "exp_date" => null, "admin_enabled" => 1, "enabled" => 1, "admin_notes" => "", "reseller_notes" => "", "bouquet" => Array(), "max_connections" => 1, "is_restreamer" => 0, "allowed_ips" => Array(), "allowed_ua" => Array(), "created_at" => time(), "created_by" => -1, "is_mag" => 0, "is_e2" => 0, "force_server_id" => 0, "is_isplock" => 0, "isp_desc" => "", "forced_country" => "", "is_stalker" => 0, "bypass_ua" => 0, "play_token" => "");
-<<<<<<< Updated upstream
-    }
-    if (strlen($_POST["username"]) == 0) {
-        $_POST["username"] = generateString(10);
-    }
-    if (strlen($_POST["password"]) == 0) {
-        $_POST["password"] = generateString(10);
-=======
     }
     if (strlen($_POST["username"]) == 0) {
         $_POST["username"] = generateString(10);
@@ -43,7 +36,6 @@ if (isset($_POST["submit_user"])) {
         if (($result) && ($result->num_rows > 0)) {
             $_STATUS = 5; // MAC in use.
         }
->>>>>>> Stashed changes
     }
     foreach (Array("max_connections", "enabled", "admin_enabled") as $rSelection) {
         if (isset($_POST[$rSelection])) {
@@ -191,23 +183,28 @@ if ($rSettings["sidebar"]) {
                 <!-- end page title --> 
                 <div class="row">
                     <div class="col-xl-12">
-                        <?php if ((isset($_STATUS)) && ($_STATUS == 0)) { ?>
+                        <?php if (isset($_STATUS)) {
+                        if ($_STATUS == 0) { ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                             User operation was completed successfully.
                         </div>
-                        <?php } else if ((isset($_STATUS)) && ($_STATUS > 0)) { ?>
+                        <?php } else if ($_STATUS == 1) { ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            An incorrect expiration date was entered, please try again.
+                        </div>
+                        <?php } else if ($_STATUS == 2) { ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                             There was an error performing this operation! Please check the form entry and try again.
                         </div>
-<<<<<<< Updated upstream
-                        <?php } ?>
-=======
                         <?php } else if ($_STATUS == 3) { ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -231,7 +228,6 @@ if ($rSettings["sidebar"]) {
                         </div>
                         <?php } 
                         } ?>
->>>>>>> Stashed changes
                         <div class="card">
                             <div class="card-body">
                                 <form action="./user.php<?php if (isset($_GET["id"])) { echo "?id=".$_GET["id"]; } ?>" method="POST" id="user_form">

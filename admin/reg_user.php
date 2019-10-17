@@ -1,13 +1,14 @@
 <?php
 include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 
 if (isset($_POST["submit_user"])) {
     if (isset($_POST["edit"])) {
         $rArray = getRegisteredUser($_POST["edit"]);
         unset($rArray["id"]);
     } else {
-        $rArray = Array("username" => "", "password" => "", "email" => "", "member_group_id" => 1);
+        $rArray = Array("username" => "", "password" => "", "email" => "", "member_group_id" => 1, "verified" => 0, "credits" => 0, "notes" => "", "status" => 1, "owner_id" => 0);
     }
     if ((strlen($_POST["username"]) == 0) OR ((strlen($_POST["password"]) == 0) AND (!isset($_POST["edit"])))) {
         $_STATUS = 1;
@@ -19,8 +20,7 @@ if (isset($_POST["submit_user"])) {
         } else {
             $rArray["verified"] = 0;
         }
-        if (strlen($_POST["password"]) == 0) {
-        } else {
+        if (!strlen($_POST["password"]) == 0) {
             $rArray["password"] = cryptPassword($_POST["password"]);
         }
         unset($_POST["password"]);
@@ -124,12 +124,6 @@ if ($rSettings["sidebar"]) {
                                                     <span class="d-none d-sm-inline">Details</span>
                                                 </a>
                                             </li>
-                                            <li class="nav-item">
-                                                <a href="#advanced-options" data-toggle="tab" class="nav-link rounded-0 pt-2 pb-2">
-                                                    <i class="mdi mdi-folder-alert-outline mr-1"></i>
-                                                    <span class="d-none d-sm-inline">Advanced</span>
-                                                </a>
-                                            </li>
                                         </ul>
                                         <div class="tab-content b-0 mb-0 pt-0">
                                             <div class="tab-pane" id="user-details">
@@ -164,12 +158,21 @@ if ($rSettings["sidebar"]) {
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="owner_id">Owner</label>
+                                                            <div class="col-md-8">
+                                                                <select name="owner_id" id="owner_id" class="form-control select2" data-toggle="select2">
+                                                                    <option value="0">No Owner</option>
+                                                                    <?php foreach (getRegisteredUsers(0) as $rRegUser) { ?>
+                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["owner_id"]) == intval($rRegUser["id"])) { echo "selected "; } } ?>value="<?=$rRegUser["id"]?>"><?=$rRegUser["username"]?></option>
+                                                                    <?php } ?>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row mb-4">
                                                             <label class="col-md-4 col-form-label" for="verified">Verified</label>
                                                             <div class="col-md-2">
                                                                 <input name="verified" id="verified" type="checkbox"<?php if ((isset($rUser)) && ($rUser["verified"] == 1)) { echo "checked "; } ?>data-plugin="switchery" class="js-switch" data-color="#039cfd"/>
                                                             </div>
-<<<<<<< Updated upstream
-=======
                                                             <label class="col-md-4 col-form-label" for="credits">Credits</label>
                                                             <div class="col-md-2">
                                                                 <input type="text" class="form-control" id="credits" onkeypress="return isNumberKey(event)" name="credits" value="<?php if (isset($rUser)) { echo $rUser["credits"]; } else { echo "0"; } ?>">
@@ -186,27 +189,12 @@ if ($rSettings["sidebar"]) {
                                                             <div class="col-md-8">
                                                                 <textarea id="notes" name="notes" class="form-control" rows="3" placeholder=""><?php if (isset($rUser)) { echo $rUser["notes"]; } ?></textarea>
                                                             </div>
->>>>>>> Stashed changes
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
                                                 <ul class="list-inline wizard mb-0">
                                                     <li class="next list-inline-item float-right">
                                                         <input name="submit_user" type="submit" class="btn btn-primary" value="<?php if (isset($rUser)) { echo "Edit"; } else { echo "Add"; } ?>" />
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                            <div class="tab-pane" id="advanced-options">
-                                                <div class="row">
-                                                    <div class="col-12">
-                                                        <p class="sub-header text-center">
-                                                            Advanced options and reseller options are coming in a future release. Stay tuned.
-                                                        </p>
-                                                    </div> <!-- end col -->
-                                                </div> <!-- end row -->
-                                                <ul class="list-inline wizard mb-0">
-                                                    <li class="previous list-inline-item">
-                                                        <a href="javascript: void(0);" class="btn btn-secondary">Previous</a>
                                                     </li>
                                                 </ul>
                                             </div>

@@ -1,5 +1,7 @@
 <?php
 include "functions.php";
+if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
+if (!$rPermissions["is_admin"]) { exit; }
 if (!isset($_GET["id"])) { exit; } ?>
 <html>
     <script src="assets/js/vendor.min.js"></script>
