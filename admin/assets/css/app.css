@@ -3775,4 +3775,19 @@ body.authentication-bg-pattern{
 .copyright a {
     font-weight: bold;
     color: white;
+<<<<<<< Updated upstream
+=======
+}
+.timeline-item-left p, .timeline-item-left h4 {
+    text-align: left !important;
+}
+#datatable-streampage_length, #datatable-streampage_filter {
+    display: none;
+}
+#datatable-users_length, #datatable-users_filter {
+    display: none;
+}
+.expired {
+    color: #e57373 !important;
+>>>>>>> Stashed changes
 }
