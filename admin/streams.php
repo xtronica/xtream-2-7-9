@@ -63,6 +63,39 @@ if ($rSettings["sidebar"]) {
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
                                 <div class="form-group row mb-4">
+                                    <?php if ($rPermissions["is_reseller"]) { ?>
+                                    <div class="col-md-12" style="margin-bottom: 25px;">
+                                        <input type="text" class="form-control" id="stream_search" value="" placeholder="Search Streams...">
+                                    </div>
+                                    <label class="col-md-2 col-form-label text-center" for="category_name">Category Name</label>
+                                    <div class="col-md-4">
+                                        <select id="category_id" class="form-control" data-toggle="select2">
+                                            <option value="" selected>All Categories</option>
+                                            <?php foreach ($rCategories as $rCategory) { ?>
+                                            <option value="<?=$rCategory["id"]?>"><?=$rCategory["category_name"]?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select id="filter" class="form-control" data-toggle="select2">
+                                            <option value="" selected>No Filter</option>
+                                            <option value="1">Online</option>
+                                            <option value="2">Down</option>
+                                            <option value="3">Stopped</option>
+                                            <option value="4">Starting</option>
+                                            <option value="5">On Demand</option>
+                                            <option value="6">Direct</option>
+                                        </select>
+                                    </div>
+                                    <label class="col-md-1 col-form-label text-center" for="show_entries">Show</label>
+                                    <div class="col-md-2">
+                                        <select id="show_entries" class="form-control" data-toggle="select2">
+                                            <?php foreach (Array(10, 25, 50, 250, 500, 1000) as $rShow) { ?>
+                                            <option<?php if ($rAdminSettings["default_entries"] == $rShow) { echo " selected"; } ?> value="<?=$rShow?>"><?=$rShow?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <?php } else { ?>
                                     <div class="col-md-3">
                                         <input type="text" class="form-control" id="stream_search" value="" placeholder="Search Streams...">
                                     </div>
@@ -94,6 +127,7 @@ if ($rSettings["sidebar"]) {
                                             <?php } ?>
                                         </select>
                                     </div>
+                                    <?php } ?>
                                 </div>
                                 <table id="datatable-streampage" style="font-family: tahoma;" class="table dt-responsive nowrap">
                                     <thead>
@@ -226,7 +260,10 @@ if ($rSettings["sidebar"]) {
                 },
                 columnDefs: [
                     {"className": "dt-center", "targets": [0,2,3,4,5,6,7,8]},
-                    {"orderable": false, "targets": [6,7]}
+                    {"orderable": false, "targets": [6,7]},
+                    <?php if ($rPermissions["is_reseller"]) { ?>
+                    {"visible": false, "targets": [2,5,6,7]}
+                    <?php } ?>
                 ],
                 order: [[ 0, "desc" ]],
                 pageLength: <?=$rAdminSettings["default_entries"] ?: 10?>

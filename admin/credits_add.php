@@ -10,9 +10,12 @@ if ((isset($_POST["submit_credits"])) && (isset($_POST["id"]))) {
     if (($rUserInfo["credits"] - $rCost < 0) && ($rCost > 0)) {
         $_STATUS = 1;
     }
+    if ($rUser["credits"] + $rCost < 0) {
+        $_STATUS = 1;
+    }
     if ((!isset($_STATUS)) && ($rUser)) {
-        $rNewCredits = intval($rUserInfo["credits"]) - $rCost;
-        $rUpdCredits = intval($rUser["credits"]) + $rCost;
+        $rNewCredits = $rUserInfo["credits"] - $rCost;
+        $rUpdCredits = $rUser["credits"] + $rCost;
         $db->query("UPDATE `reg_users` SET `credits` = ".$rNewCredits." WHERE `id` = ".intval($rUserInfo["id"]).";");
         $db->query("UPDATE `reg_users` SET `credits` = ".$rUpdCredits." WHERE `id` = ".intval($rUser["id"]).";");
         $db->query("INSERT INTO `reg_userlog`(`owner`, `username`, `password`, `date`, `type`) VALUES(".intval($rUserInfo["id"]).", '".$db->real_escape_string($rUser["username"])."', '', ".intval(time()).", '[<b>UserPanel</b> -> <u>Transfer Credits</u>] Credits: <font color=\"green\">".$rUserInfo["credits"]."</font> -> <font color=\"red\">".$rNewCredits."</font>');");
@@ -181,12 +184,14 @@ if ($rSettings["sidebar"]) {
         
         function calculateCredits() {
             var rCredits = $("#credits").val();
+            var rUserCredits = <?=$rUser["credits"]?>;
+
             if (!$.isNumeric(rCredits)) {
                 rCredits = 0;
             }
             $("#cost_credits").html($.number(rCredits, 2));
             $("#remaining_credits").html($.number(<?=$rUserInfo["credits"]?> - rCredits, 0));
-            if (<?=$rUserInfo["credits"]?> - rCredits < 2) {
+            if ((parseFloat(<?=$rUserInfo["credits"]?>) - parseFloat(rCredits) < 0) || (parseFloat(rUserCredits) + parseFloat(rCredits) < 0)) {
                 $("#no-credits").show()
                 $(".purchase").prop('disabled', true);
             } else {

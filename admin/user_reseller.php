@@ -38,7 +38,7 @@ if (isset($_POST["submit_user"])) {
                 } else {
                     $rCost = $rPackage["official_credits"];
                 }
-                if (($rUserInfo["credits"] > $rCost) && ($canGenerateTrials)) {
+                if (($rUserInfo["credits"] >= $rCost) && ($canGenerateTrials)) {
                     if ($_POST["trial"]) {
                         $rArray["exp_date"] = strtotime('+'.intval($rPackage["trial_duration"]).' '.$rPackage["trial_duration_in"]);
                         $rArray["is_trial"] = 1;
