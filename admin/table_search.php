@@ -387,6 +387,7 @@ if ($rType == "users") {
         $rOrderRow = 0;
     }
     $rWhere = Array();
+    $rWhere[] = "`streams`.`type` in (1,3)";
     if (isset($_GET["stream_id"])) {
         $rWhere[] = "`streams`.`id` = ".intval($_GET["stream_id"]);
         $rOrderBy = "ORDER BY `streams_sys`.`server_stream_id` ASC";
