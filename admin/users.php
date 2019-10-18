@@ -81,10 +81,9 @@ if ($rSettings["sidebar"]) {
                                     <label class="col-md-1 col-form-label text-center" for="show_entries">Show</label>
                                     <div class="col-md-1">
                                         <select id="show_entries" class="form-control" data-toggle="select2">
-                                            <option value="10" selected>10</option>
-                                            <option value="25">25</option>
-                                            <option value="50">50</option>
-                                            <option value="100">100</option>
+                                            <?php foreach (Array(10, 25, 50, 250, 500, 1000) as $rShow) { ?>
+                                            <option<?php if ($rAdminSettings["default_entries"] == $rShow) { echo " selected"; } ?> value="<?=$rShow?>"><?=$rShow?></option>
+                                            <?php } ?>
                                         </select>
                                     </div>
                                 </div>
@@ -247,9 +246,7 @@ if ($rSettings["sidebar"]) {
         <!-- Datatables init -->
         <script>
         var autoRefresh = true;
-        var rReseller = "";
-        var rFilter = "";
-        
+
         function api(rID, rType) {
             if (rType == "delete") {
                 if (confirm('Are you sure you want to delete this user?') == false) {
@@ -336,10 +333,10 @@ if ($rSettings["sidebar"]) {
         }
         
         function getFilter() {
-            return window.rFilter;
+            return $("#filter").val();
         }
         function getReseller() {
-            return window.rReseller;
+            return $("#reseller").val();
         }
         
         function reloadUsers() {
@@ -382,7 +379,8 @@ if ($rSettings["sidebar"]) {
                     {"visible": false, "targets": [10]},
                     {"orderable": false, "targets": [11]}
                 ],
-                order: [[ 0, "desc" ]]
+                order: [[ 0, "desc" ]],
+                pageLength: <?=$rAdminSettings["default_entries"] ?: 10?>
             });
             $('#user_search').keyup(function(){
                 $('#datatable-users').DataTable().search($(this).val()).draw();
@@ -391,11 +389,9 @@ if ($rSettings["sidebar"]) {
                 $('#datatable-users').DataTable().page.len($(this).val()).draw();
             })
             $('#filter').change(function(){
-                window.rFilter = $(this).val();
                 $("#datatable-users").DataTable().ajax.reload( null, false );
             })
             $('#reseller').change(function(){
-                window.rReseller = $(this).val();
                 $("#datatable-users").DataTable().ajax.reload( null, false );
             })
             <?php if (!$detect->isMobile()) { ?>

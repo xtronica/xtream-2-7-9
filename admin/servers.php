@@ -181,7 +181,7 @@ if ($rSettings["sidebar"]) {
                 drawCallback: function() {
                     $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
                 },
-                responsive: false
+                responsive: false,
             });
         });
         </script>

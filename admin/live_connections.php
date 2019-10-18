@@ -42,20 +42,18 @@ if ($rSettings["sidebar"]) {
                 <!-- end page title --> 
                 <div class="row">
                     <div class="col-12">
-                        <div class="alert alert-warning" role="alert">
-                            <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
-                        </div>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
                                 <table id="datatable" class="table dt-responsive nowrap">
                                     <thead>
                                         <tr>
+                                            <th class="text-center">ID</th>
                                             <th class="text-center">Status</th>
                                             <th>Username</th>
                                             <th>Channel</th>
                                             <th>Server</th>
+                                            <th class="text-center">Start Date</th>
                                             <th class="text-center">IP</th>
-                                            <th class="text-center">Connections</th>
                                             <th class="text-center">Country</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
@@ -157,7 +155,7 @@ if ($rSettings["sidebar"]) {
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: "./table.php",
+                    url: "./table_search.php",
                     "data": function(d) {
                         d.id = "live_connections";
                         <?php if (isset($_GET["server_id"])) { ?>
@@ -170,13 +168,11 @@ if ($rSettings["sidebar"]) {
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,4,5,6,7]},
-                    <?php if ($rPermissions["is_admin"]) { ?>
-                    {"visible": false, "targets": [8]}
-                    <?php } else { ?>
-                    {"visible": false, "targets": [3,8]}
-                    <?php } ?>
+                    {"className": "dt-center", "targets": [0,1,5,6,7,8]}
                 ],
+                order: [[ 0, "desc" ]],
+                pageLength: <?=$rAdminSettings["default_entries"] ?: 10?>,
+                lengthMenu: [10, 25, 50, 250, 500, 1000],
             });
             <?php if (!$detect->isMobile()) { ?>
             setTimeout(reloadUsers, 5000);

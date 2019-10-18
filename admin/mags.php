@@ -88,10 +88,9 @@ if ($rSettings["sidebar"]) {
                                     <label class="col-md-1 col-form-label text-center" for="show_entries">Show</label>
                                     <div class="col-md-1">
                                         <select id="show_entries" class="form-control" data-toggle="select2">
-                                            <option value="10" selected>10</option>
-                                            <option value="25">25</option>
-                                            <option value="50">50</option>
-                                            <option value="100">100</option>
+                                            <?php foreach (Array(10, 25, 50, 250, 500, 1000) as $rShow) { ?>
+                                            <option<?php if ($rAdminSettings["default_entries"] == $rShow) { echo " selected"; } ?> value="<?=$rShow?>"><?=$rShow?></option>
+                                            <?php } ?>
                                         </select>
                                     </div>
                                 </div>
@@ -241,9 +240,11 @@ if ($rSettings["sidebar"]) {
                 },
                 columnDefs: [
                     {"className": "dt-center", "targets": [0,2,4,5,6,7,8]},
-                    {"orderable": false, "targets": [8]}
+                    {"orderable": false, "targets": [8]},
+                    {"visible": false, "targets": [1]}
                 ],
-                order: [[ 0, "desc" ]]
+                order: [[ 0, "desc" ]],
+                pageLength: <?=$rAdminSettings["default_entries"] ?: 10?>
             });
             $('#user_search').keyup(function(){
                 $('#datatable-users').DataTable().search($(this).val()).draw();

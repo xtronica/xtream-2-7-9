@@ -404,6 +404,9 @@ if ($rSettings["sidebar"]) {
                                                             <?php
                                                             if (isset($rStream)) {
                                                                 $rStreamSources = json_decode($rStream["stream_source"], True);
+                                                                if (!$rStreamSources) {
+                                                                    $rStreamSources = Array("");
+                                                                }
                                                             } else {
                                                                 $rStreamSources = Array("");
                                                             }
@@ -938,7 +941,7 @@ if ($rSettings["sidebar"]) {
                 serverSide: true,
                 bInfo: false,
                 ajax: {
-                    url: "./table.php",
+                    url: "./table_search.php",
                     "data": function(d) {
                         d.id = "streams";
                         d.stream_id = <?=$rStream["id"]?>;

@@ -3,6 +3,8 @@ include "functions.php";
 if (!isset($_SESSION['user_id'])) { header("Location: ./login.php"); exit; }
 if (!$rPermissions["is_admin"]) { exit; }
 
+checkTable("admin_settings");
+
 if (isset($_POST["submit_settings"])) {
     $rArray = getSettings();
     foreach (Array("disallow_empty_user_agents", "show_all_category_mag", "show_not_on_air_video", "show_banned_video", "show_expired_video") as $rSetting) {
@@ -24,6 +26,9 @@ if (isset($_POST["submit_settings"])) {
         unset($_POST["sidebar"]);
     } else {
         $rAdminSettings["sidebar"] = false;
+    }
+    if (isset($_POST["default_entries"])) {
+        $rAdminSettings["default_entries"] = $_POST["default_entries"];
     }
     if (isset($_POST["admin_username"])) {
         $rAdminSettings["admin_username"] = $_POST["admin_username"];
@@ -76,11 +81,6 @@ if ($rSettings["sidebar"]) {
                     <div class="row">
                         <div class="col-12">
                             <div class="page-title-box">
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <input name="submit_settings" type="submit" class="btn btn-primary btn-xs" value="Save Changes" />
-                                    </ol>
-                                </div>
                                 <h4 class="page-title">Settings</h4>
                             </div>
                         </div>
@@ -203,8 +203,23 @@ if ($rSettings["sidebar"]) {
                                                                 <input name="sidebar" id="sidebar" type="checkbox"<?php if ($rAdminSettings["sidebar"] == 1) { echo "checked "; } ?>data-plugin="switchery" class="js-switch" data-color="#039cfd"/>
                                                             </div>
                                                         </div>
+                                                        <div class="form-group row mb-4">
+                                                            <label class="col-md-4 col-form-label" for="default_entries">Default Entries to Show <i data-toggle="tooltip" data-placement="top" title="" data-original-title="Default entries for Users, Registered Users, Streams, VOD and Logs." class="mdi mdi-information"></i></label>
+                                                            <div class="col-md-2">
+                                                                <select name="default_entries" id="default_entries" class="form-control" data-toggle="select2">
+                                                                    <?php foreach (Array(10, 25, 50, 250, 500, 1000) as $rShow) { ?>
+                                                                    <option<?php if ($rAdminSettings["default_entries"] == $rShow) { echo " selected"; } ?> value="<?=$rShow?>"><?=$rShow?></option>
+                                                                    <?php } ?>
+                                                                </select>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <ul class="list-inline wizard mb-0">
+                                                    <li class="list-inline-item float-right">
+                                                        <input name="submit_settings" type="submit" class="btn btn-primary" value="Save Changes" />
+                                                    </li>
+                                                </ul>
                                             </div>
                                             <div class="tab-pane" id="ddos">
                                                 <div class="row">
@@ -223,6 +238,11 @@ if ($rSettings["sidebar"]) {
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
+                                                <ul class="list-inline wizard mb-0">
+                                                    <li class="list-inline-item float-right">
+                                                        <input name="submit_settings" type="submit" class="btn btn-primary" value="Save Changes" />
+                                                    </li>
+                                                </ul>
                                             </div>
                                             <div class="tab-pane" id="streaming">
                                                 <div class="row">
@@ -274,6 +294,11 @@ if ($rSettings["sidebar"]) {
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
+                                                <ul class="list-inline wizard mb-0">
+                                                    <li class="list-inline-item float-right">
+                                                        <input name="submit_settings" type="submit" class="btn btn-primary" value="Save Changes" />
+                                                    </li>
+                                                </ul>
                                             </div>
                                             <div class="tab-pane" id="video">
                                                 <div class="row">
@@ -307,6 +332,11 @@ if ($rSettings["sidebar"]) {
                                                         </div>
                                                     </div> <!-- end col -->
                                                 </div> <!-- end row -->
+                                                <ul class="list-inline wizard mb-0">
+                                                    <li class="list-inline-item float-right">
+                                                        <input name="submit_settings" type="submit" class="btn btn-primary" value="Save Changes" />
+                                                    </li>
+                                                </ul>
                                             </div>
                                             <div class="tab-pane" id="database">
                                                 <div class="row">
@@ -371,21 +401,6 @@ if ($rSettings["sidebar"]) {
         <script src="assets/libs/moment/moment.min.js"></script>
         <script src="assets/libs/daterangepicker/daterangepicker.js"></script>
 
-        <!-- third party js -->
-        <script src="assets/libs/datatables/jquery.dataTables.min.js"></script>
-        <script src="assets/libs/datatables/dataTables.bootstrap4.js"></script>
-        <script src="assets/libs/datatables/dataTables.responsive.min.js"></script>
-        <script src="assets/libs/datatables/responsive.bootstrap4.min.js"></script>
-        <script src="assets/libs/datatables/dataTables.buttons.min.js"></script>
-        <script src="assets/libs/datatables/buttons.bootstrap4.min.js"></script>
-        <script src="assets/libs/datatables/buttons.html5.min.js"></script>
-        <script src="assets/libs/datatables/buttons.flash.min.js"></script>
-        <script src="assets/libs/datatables/buttons.print.min.js"></script>
-        <script src="assets/libs/datatables/dataTables.keyTable.min.js"></script>
-        <script src="assets/libs/datatables/dataTables.select.min.js"></script>
-        <script src="assets/libs/pdfmake/pdfmake.min.js"></script>
-        <script src="assets/libs/pdfmake/vfs_fonts.js"></script>
-
         <!-- Plugins js-->
         <script src="assets/libs/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js"></script>
         <script src="assets/js/pages/form-wizard.init.js"></script>
@@ -418,21 +433,6 @@ if ($rSettings["sidebar"]) {
                 }
             });
             $("form").attr('autocomplete', 'off');
-            $("#datatable").DataTable({
-                language: {
-                    paginate: {
-                        previous: "<i class='mdi mdi-chevron-left'>",
-                        next: "<i class='mdi mdi-chevron-right'>"
-                    }
-                },
-                drawCallback: function() {
-                    $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
-                    $('[data-toggle="tooltip"]').tooltip();
-                },
-                responsive: false,
-                bAutoWidth: false,
-                bInfo: false
-            });
             $("#flood_limit").inputFilter(function(value) { return /^\d*$/.test(value); });
             $("#user_auto_kick_hours").inputFilter(function(value) { return /^\d*$/.test(value); });
             $("#probesize").inputFilter(function(value) { return /^\d*$/.test(value); });

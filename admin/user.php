@@ -278,7 +278,7 @@ if ($rSettings["sidebar"]) {
                                                             <div class="col-md-8">
                                                                 <select name="member_id" id="member_id" class="form-control select2" data-toggle="select2">
                                                                     <?php foreach ($rRegisteredUsers as $rRegisteredUser) { ?>
-                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["member_id"]) == intval($rRegisteredUser["id"])) { echo "selected "; } } ?>value="<?=$rRegisteredUser["id"]?>"><?=$rRegisteredUser["username"]?></option>
+                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["member_id"]) == intval($rRegisteredUser["id"])) { echo "selected "; } } else { if (intval($rUserInfo["id"]) == intval($rRegisteredUser["id"])) { echo "selected "; } } ?>value="<?=$rRegisteredUser["id"]?>"><?=$rRegisteredUser["username"]?></option>
                                                                     <?php } ?>
                                                                 </select>
                                                             </div>
@@ -362,7 +362,7 @@ if ($rSettings["sidebar"]) {
                                                         <div class="form-group row mb-4" style="display:none" id="mac_entry_mag">
                                                             <label class="col-md-4 col-form-label" for="mac_address_mag">MAC Address</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="mac_address_mag" name="mac_address_mag" value="<?php if (isset($rUser)) { echo $rUser["mac_address_mag"]; } else { echo "00:1A:79:"; } ?>">
+                                                                <input type="text" class="form-control" id="mac_address_mag" name="mac_address_mag" value="<?php if (isset($rUser)) { echo $rUser["mac_address_mag"]; } ?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4" style="display:none" id="mac_entry_e2">

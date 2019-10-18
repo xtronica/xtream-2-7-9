@@ -49,15 +49,31 @@
                     <li class="notification-list">
                         <a class="nav-link text-white waves-effect" href="#" role="button">
                             <i class="mdi mdi-coins noti-icon"></i>
-                            <?=number_format($rUserInfo["credits"], 2)?>
+                            <?php if (floor($rUserInfo["credits"]) == $rUserInfo["credits"]) {
+                                echo number_format($rUserInfo["credits"], 0);
+                            } else {
+                                echo number_format($rUserInfo["credits"], 2);
+                            } ?>
                         </a>
                     </li>
                     <?php } ?>
                     <?php if ($rPermissions["is_admin"] == 1) { ?>
-                    <li class="notification-list">
-                        <a href="./settings.php" class="nav-link right-bar-toggle waves-effect text-white">
+                    <li class="dropdown notification-list">
+                        <a class="nav-link dropdown-toggle nav-user mr-0 waves-effect text-white" data-toggle="dropdown" href="#" role="button" aria-haspopup="false" aria-expanded="false">
                             <i class="fe-settings noti-icon"></i>
                         </a>
+                        <div class="dropdown-menu dropdown-menu-right profile-dropdown">
+                            <a href="./settings.php" class="dropdown-item notify-item"><span>Settings</span></a>
+                            <a href="./epgs.php" class="dropdown-item notify-item"><span>EPG's</span></a>
+                            <a href="./bouquets.php" class="dropdown-item notify-item"><span>Bouquets</span></a>
+                            <a href="./subresellers.php" class="dropdown-item notify-item"><span>Subresellers</span></a>
+                            <a href="./groups.php" class="dropdown-item notify-item"><span>Groups</span></a>
+                            <a href="./packages.php" class="dropdown-item notify-item"><span>Packages</span></a>
+                            <a href="./profiles.php" class="dropdown-item notify-item"><span>Transcode Profiles</span></a>
+                            <a href="./stream_categories.php" class="dropdown-item notify-item"><span>Stream Categories</span></a>
+                            <a href="./movie_categories.php" class="dropdown-item notify-item"><span>Movie Categories</span></a>
+                            <a href="#" class="dropdown-item notify-item"><span><span>Series Categories <i class="la la-exclamation-triangle"></i></span></a>
+                        </div>
                     </li>
                     <?php } ?>
                     <li class="notification-list">
@@ -217,20 +233,6 @@
                                     <li><a href="#">Client Logs <i class="la la-exclamation-triangle"></i></a></li>
                                     <li><a href="#">Stream Logs <i class="la la-exclamation-triangle"></i></a></li>
                                     <li><a href="./mag_events.php">Manage MAG Events</a></li>
-                                </ul>
-                            </li>
-                            <li>
-                                <a href="javascript: void(0);"><i class="mdi mdi-wrench"></i><span>Setup</span><span class="menu-arrow"></span></a>
-                                <ul class="nav-second-level" aria-expanded="false">
-                                    <li><a href="./epgs.php">EPG</a></li>
-                                    <li><a href="./bouquets.php">Bouquets</a></li>
-                                    <li><a href="./subresellers.php">Subresellers</a></li>
-                                    <li><a href="./groups.php">Groups</a></li>
-                                    <li><a href="./packages.php">Packages</a></li>
-                                    <li><a href="./profiles.php">Transcode Profiles</a></li>
-                                    <li><a href="./stream_categories.php">Stream Categories</a></li>
-                                    <li><a href="./movie_categories.php">Movie Categories</a></li>
-                                    <li><a href="#">Series Categories <i class="la la-exclamation-triangle"></i></a></li>
                                 </ul>
                             </li>
                             <?php } ?>

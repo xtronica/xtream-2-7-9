@@ -60,16 +60,14 @@ if ($rSettings["sidebar"]) {
 
                 <div class="row">
                     <div class="col-12">
-                        <?php if ($rPermissions["is_admin"]) { ?>
-                        <div class="alert alert-warning" role="alert">
-                            <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
-                        </div>
-                        <?php } ?>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
                                 <div class="form-group row mb-4">
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" id="stream_search" value="" placeholder="Search Streams...">
+                                    </div>
                                     <label class="col-md-2 col-form-label text-center" for="category_name">Category Name</label>
-                                    <div class="col-md-2">
+                                    <div class="col-md-3">
                                         <select id="category_id" class="form-control" data-toggle="select2">
                                             <option value="" selected>All Categories</option>
                                             <?php foreach ($rCategories as $rCategory) { ?>
@@ -77,17 +75,23 @@ if ($rSettings["sidebar"]) {
                                             <?php } ?>
                                         </select>
                                     </div>
-                                    <label class="col-md-2 col-form-label text-center" for="stream_search">Search Streams</label>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control" id="stream_search" value="">
+                                        <select id="filter" class="form-control" data-toggle="select2">
+                                            <option value="" selected>No Filter</option>
+                                            <option value="1">Online</option>
+                                            <option value="2">Down</option>
+                                            <option value="3">Stopped</option>
+                                            <option value="4">Starting</option>
+                                            <option value="5">On Demand</option>
+                                            <option value="6">Direct</option>
+                                        </select>
                                     </div>
-                                    <label class="col-md-2 col-form-label text-center" for="show_entries">Entries to Show</label>
-                                    <div class="col-md-2">
+                                    <label class="col-md-1 col-form-label text-center" for="show_entries">Show</label>
+                                    <div class="col-md-1">
                                         <select id="show_entries" class="form-control" data-toggle="select2">
-                                            <option value="10" selected>10</option>
-                                            <option value="25">25</option>
-                                            <option value="50">50</option>
-                                            <option value="100">100</option>
+                                            <?php foreach (Array(10, 25, 50, 250, 500, 1000) as $rShow) { ?>
+                                            <option<?php if ($rAdminSettings["default_entries"] == $rShow) { echo " selected"; } ?> value="<?=$rShow?>"><?=$rShow?></option>
+                                            <?php } ?>
                                         </select>
                                     </div>
                                 </div>
@@ -132,7 +136,6 @@ if ($rSettings["sidebar"]) {
 
         <script>
         var autoRefresh = true;
-        var rCategory = "";
         
         function toggleAuto() {
             if (autoRefresh == true) {
@@ -186,9 +189,14 @@ if ($rSettings["sidebar"]) {
             }
             setTimeout(reloadStreams, 5000);
         }
+
         function getCategory() {
-            return window.rCategory;
+            return $("#category_id").val();
         }
+        function getFilter() {
+            return $("#filter").val();
+        }
+
         $(document).ready(function() {
             $('select').select2({width: '100%'});
             $("#datatable-streampage").DataTable({
@@ -209,18 +217,19 @@ if ($rSettings["sidebar"]) {
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: "./table.php",
+                    url: "./table_search.php",
                     "data": function(d) {
                         d.id = "streams",
-                        d.category = getCategory();
+                        d.category = getCategory(),
+                        d.filter = getFilter()
                     }
                 },
                 columnDefs: [
-                    {"className": "dt-center", "targets": [0,2,3,4,5,6,7]},
-                    <?php if (!$rPermissions["is_admin"]) { ?>
-                    {"targets": [2, 5, 6, 7], "visible": false, "searchable": false},
-                    <?php } ?>
-                ]
+                    {"className": "dt-center", "targets": [0,2,3,4,5,6,7,8]},
+                    {"orderable": false, "targets": [6,7]}
+                ],
+                order: [[ 0, "desc" ]],
+                pageLength: <?=$rAdminSettings["default_entries"] ?: 10?>
             });
             $('#stream_search').keyup(function(){
                 $('#datatable-streampage').DataTable().search($(this).val()).draw();
@@ -229,7 +238,9 @@ if ($rSettings["sidebar"]) {
                 $('#datatable-streampage').DataTable().page.len($(this).val()).draw();
             })
             $('#category_id').change(function(){
-                window.rCategory = $(this).val();
+                $("#datatable-streampage").DataTable().ajax.reload( null, false );
+            })
+            $('#filter').change(function(){
                 $("#datatable-streampage").DataTable().ajax.reload( null, false );
             })
             <?php if (!$detect->isMobile()) { ?>

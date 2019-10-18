@@ -15,8 +15,6 @@ include realpath(dirname(__FILE__))."/mobiledetect.php";
 $detect = new Mobile_Detect;
 
 $rStatusArray = Array(0 => "Stopped", 1 => "Running", 2 => "Starting", 3 => "<strong style='color:#cc9999'>DOWN</strong>", 4 => "On Demand", 5 => "Direct");
-$rAdminSettingsPath = "/home/xtreamcodes/iptv_xtream_codes/adtools/settings.json";
-$rAdminSettings = json_decode(file_get_contents($rAdminSettingsPath), True);
 
 function generateString($strength = 10) {
     $input = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -729,7 +727,8 @@ function getSubresellerSetup($rID) {
 function checkTable($rTable) {
     global $db;
     $rTableQuery = Array(
-        "subreseller_setup" => "CREATE TABLE `subreseller_setup` (`id` int(11) NOT NULL AUTO_INCREMENT, `reseller` int(8) NOT NULL DEFAULT '0', `subreseller` int(8) NOT NULL DEFAULT '0', `status` int(1) NOT NULL DEFAULT '1', `dateadded` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;"
+        "subreseller_setup" => "CREATE TABLE `subreseller_setup` (`id` int(11) NOT NULL AUTO_INCREMENT, `reseller` int(8) NOT NULL DEFAULT '0', `subreseller` int(8) NOT NULL DEFAULT '0', `status` int(1) NOT NULL DEFAULT '1', `dateadded` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;",
+        "admin_settings" => "CREATE TABLE `admin_settings` (`type` varchar(128) NOT NULL DEFAULT '', `value` varchar(4096) NOT NULL DEFAULT '', PRIMARY KEY (`type`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;"
     );
     if ((!$db->query("DESCRIBE `".$rTable."`;")) && (isset($rTableQuery[$rTable]))) {
         // Doesn't exist! Create it.
@@ -757,16 +756,32 @@ function secondsToTime($inputSeconds) {
     return $obj;
 }
 
+function getAdminSettings() {
+    global $db;
+    $return = Array();
+    $result = $db->query("SELECT `type`, `value` FROM `admin_settings`;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $return[$row["type"]] = $row["value"];
+        }
+    }
+    return $return;
+}
+
 function writeAdminSettings() {
-    global $rAdminSettings, $rAdminSettingsPath;
-    file_put_contents($rAdminSettingsPath, json_encode($rAdminSettings));
+    global $rAdminSettings, $db;
+    foreach ($rAdminSettings as $rKey => $rValue) {
+        if (strlen($rKey) > 0) {
+            $db->query("REPLACE INTO `admin_settings`(`type`, `value`) VALUES('".$db->real_escape_string($rKey)."', '".$db->real_escape_string($rValue)."');");
+        }
+    }
 }
 
 function getFooter() {
     // Don't be a dick. Leave it.
     global $rAdminSettings, $rPermissions, $rSettings;
     if ($rPermissions["is_admin"]) {
-        return "Copyright &copy; 2019 - <a href=\"https://xtream-ui.com\">Xtream UI</a> R".$rAdminSettings["version"]." - Free & Open Source Forever";
+        return "Copyright &copy; 2019 - <a href=\"https://xtream-ui.com\">Xtream UI</a> - Free & Open Source Forever";
     } else {
         return $rSettings["copyrights_text"];
     }
@@ -778,6 +793,7 @@ if (isset($_SESSION['user_id'])) {
     if ($rPermissions["is_admin"]) {
         $rPermissions["is_reseller"] = 0; // Don't allow Admin & Reseller!
     }
+    $rAdminSettings = getAdminSettings();
     $rSettings = getSettings();
     $rSettings["sidebar"] = $rAdminSettings["sidebar"];
     $rCategories = getCategories();

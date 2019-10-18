@@ -1,25 +1,74 @@
 <?php
 // Xtream UI - Panel Update
-$rPath = "/home/xtreamcodes/iptv_xtream_codes/adtools/settings.json";
-$rSettings = json_decode(file_get_contents($rPath), True);
+define("MAIN_DIR", "/home/xtreamcodes/iptv_xtream_codes/");
+define("CONFIG_CRYPT_KEY", "5709650b0d7806074842c6de575025b1");
 
-if (($rSettings) && ($rSettings["auto_update"])) {
-    if (time() - $rSettings["auto_update_check"] > $rSettings["auto_update_periodicity"]) {
-        $rSettings["auto_update_check"] = time();
-        $rUpdate = json_decode(file_get_contents("https://raw.githubusercontent.com/".$rSettings["git_url"]."/master/adtools/settings.json"), True);
-        if (($rUpdate["version"]) && (intval($rUpdate["version"]) > intval($rSettings["version"]))) {
+function xor_parse($data, $key) {
+    $i = 0;
+    $output = '';
+    foreach (str_split($data) as $char) {
+	    $output.= chr(ord($char) ^ ord($key[$i++ % strlen($key)]));
+    }
+    return $output;
+}
+
+function getTimezone() {
+    global $db;
+    $result = $db->query("SELECT `default_timezone` FROM `settings`;");
+    if ((isset($result)) && ($result->num_rows == 1)) {
+        return $result->fetch_assoc()["default_timezone"];
+    } else {
+        return "Europe/London";
+    }
+}
+
+$_INFO = json_decode(xor_parse(base64_decode(file_get_contents(MAIN_DIR . "config")), CONFIG_CRYPT_KEY), True);
+if (!$db = new mysqli($_INFO["host"], $_INFO["db_user"], $_INFO["db_pass"], $_INFO["db_name"], $_INFO["db_port"])) { exit("No MySQL connection!"); } 
+$db->set_charset("utf8");
+date_default_timezone_set(getTimezone());
+
+function getAdminSettings() {
+    global $db;
+    $return = Array();
+    $result = $db->query("SELECT `type`, `value` FROM `admin_settings`;");
+    if (($result) && ($result->num_rows > 0)) {
+        while ($row = $result->fetch_assoc()) {
+            $return[$row["type"]] = $row["value"];
+        }
+    }
+    return $return;
+}
+
+function writeAdminSettings($rAdminSettings) {
+    global $db;
+    foreach ($rAdminSettings as $rKey => $rValue) {
+        if (strlen($rKey) > 0) {
+            $db->query("REPLACE INTO `admin_settings`(`type`, `value`) VALUES('".$db->real_escape_string($rKey)."', '".$db->real_escape_string($rValue)."');");
+        }
+    }
+}
+
+$rAdminSettings = getAdminSettings();
+$rDefaults = Array("auto_update" => false, "auto_update_periodicity" => 3600, "auto_update_check" => 0, "version" => 7, "git_url" => "xtreamui/XtreamUI");
+foreach ($rDefaults as $rKey => $rValue) {
+    if (!isset($rAdminSettings[$rKey])) {
+        $rAdminSettings[$rKey] = $rValue;
+    }
+}
+
+if ($rAdminSettings["auto_update"]) {
+    if (time() - $rAdminSettings["auto_update_check"] > $rAdminSettings["auto_update_periodicity"]) {
+        $rAdminSettings["auto_update_check"] = time();
+        $rUpdate = json_decode(file_get_contents("https://raw.githubusercontent.com/".$rAdminSettings["git_url"]."/master/adtools/settings.json"), True);
+        if (($rUpdate["version"]) && (intval($rUpdate["version"]) > intval($rAdminSettings["version"]))) {
             // New version available!
             exec($rUpdate["update_script"]);
             // Set changes to settings here then save.
-            foreach (Array("auto_update", "auto_update_check", "auto_update_periodicity", "admin_username", "admin_password") as $rItem) {
-                if (isset($rSettings[$rItem])) {
-                    $rUpdate[$rItem] = $rSettings[$rItem];
-                }
+            foreach (Array("version", "git_url") as $rItem) {
+                $rAdminSettings[$rItem] = $rUpdate[$rItem];
             }
-            file_put_contents($rPath, json_encode($rUpdate));
-        } else {
-            file_put_contents($rPath, json_encode($rSettings));
         }
+        writeAdminSettings($rAdminSettings);
     }
 }
 ?>

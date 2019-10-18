@@ -163,7 +163,7 @@ if ($rSettings["sidebar"]) {
                                                                 <select name="owner_id" id="owner_id" class="form-control select2" data-toggle="select2">
                                                                     <option value="0">No Owner</option>
                                                                     <?php foreach (getRegisteredUsers(0) as $rRegUser) { ?>
-                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["owner_id"]) == intval($rRegUser["id"])) { echo "selected "; } } ?>value="<?=$rRegUser["id"]?>"><?=$rRegUser["username"]?></option>
+                                                                    <option <?php if (isset($rUser)) { if (intval($rUser["owner_id"]) == intval($rRegUser["id"])) { echo "selected "; } } else { if (intval($rUserInfo["id"]) == intval($rRegUser["id"])) { echo "selected "; } } ?>value="<?=$rRegUser["id"]?>"><?=$rRegUser["username"]?></option>
                                                                     <?php } ?>
                                                                 </select>
                                                             </div>

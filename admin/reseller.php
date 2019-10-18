@@ -206,7 +206,11 @@ if ($rSettings["sidebar"]) {
                 $(".active-connections .entry").html($.number(data.open_connections, 0));
                 $(".online-users .entry").html($.number(data.online_users, 0));
                 $(".active-accounts .entry").html($.number(data.active_accounts, 0));
+                <?php if (floor($rUserInfo["credits"]) == $rUserInfo["credits"]) { ?>
+                $(".credits .entry").html($.number(data.credits, 0));
+                <?php } else { ?>
                 $(".credits .entry").html($.number(data.credits, 2));
+                <?php } ?>
                 if (Date.now() - rStart < 1000) {
                     setTimeout(getStats, 1000 - (Date.now() - rStart));
                 } else {

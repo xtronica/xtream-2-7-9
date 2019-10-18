@@ -47,9 +47,6 @@ if ($rSettings["sidebar"]) {
                 <!-- end page title --> 
                 <div class="row">
                     <div class="col-12">
-                        <div class="alert alert-warning" role="alert">
-                            <i class="mdi mdi-alert-outline mr-2"></i> Search functionality is very limited in the <strong>BETA</strong>. This will be replaced and refined shortly. Also pagination speed will improve.
-                        </div>
                         <div class="card">
                             <div class="card-body" style="overflow-x:auto;">
                                 <table id="datatable" class="table dt-responsive nowrap">
@@ -185,6 +182,7 @@ if ($rSettings["sidebar"]) {
                     {"visible": false, "targets": [4,9]}
                     <?php } ?>
                 ],
+                order: [[ 0, "desc" ]]
             });
             <?php if (!$detect->isMobile()) { ?>
             setTimeout(reloadUsers, 5000);

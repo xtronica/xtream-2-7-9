@@ -44,7 +44,11 @@ if (isset($_POST["submit_user"])) {
                         $rArray["is_trial"] = 1;
                     } else {
                         if (isset($rUser)) {
-                            $rArray["exp_date"] = strtotime('+'.intval($rPackage["official_duration"]).' '.$rPackage["official_duration_in"], intval($rUser["exp_date"]));
+                            if ($rUser["exp_date"] >= time()) {
+                                $rArray["exp_date"] = strtotime('+'.intval($rPackage["official_duration"]).' '.$rPackage["official_duration_in"], intval($rUser["exp_date"]));
+                            } else {
+                                $rArray["exp_date"] = strtotime('+'.intval($rPackage["official_duration"]).' '.$rPackage["official_duration_in"]);
+                            }
                         } else {
                             $rArray["exp_date"] = strtotime('+'.intval($rPackage["official_duration"]).' '.$rPackage["official_duration_in"]);
                         }
@@ -93,11 +97,22 @@ if (isset($_POST["submit_user"])) {
             $rArray["member_id"] = $rUserInfo["id"]; // Invalid owner, reset.
         }
     }
-    if (strlen($_POST["username"]) == 0) {
-        $_POST["username"] = generateString(10);
+    if (!$rPermissions["allow_change_pass"]) {
+        if (isset($rUser)) {
+            $_POST["password"] = $rUser["password"];
+        } else {
+            $_POST["password"] = "";
+        }
     }
-    if (strlen($_POST["password"]) == 0) {
+    if ((strlen($_POST["username"]) == 0) OR (($rArray["is_mag"]) && (!isset($rUser))) OR (($rArray["is_e2"]) && (!isset($rUser)))) {
+        $_POST["username"] = generateString(10);
+    } else if ((($rArray["is_mag"]) && (isset($rUser))) OR (($rArray["is_e2"]) && (isset($rUser)))) {
+        $_POST["username"] = $rUser["username"];
+    }
+    if ((strlen($_POST["password"]) == 0) OR (($rArray["is_mag"]) && (!isset($rUser))) OR (($rArray["is_e2"]) && (!isset($rUser)))) {
         $_POST["password"] = generateString(10);
+    } else if ((($rArray["is_mag"]) && (isset($rUser))) OR (($rArray["is_e2"]) && (isset($rUser)))) {
+        $_POST["password"] = $rUser["password"];
     }
     $rArray["username"] = $_POST["username"];
     $rArray["password"] = $_POST["password"];
@@ -407,7 +422,7 @@ if ($rSettings["sidebar"]) {
                                                         <div class="form-group row mb-4" style="display:none" id="mac_entry_mag">
                                                             <label class="col-md-4 col-form-label" for="mac_address_mag">MAC Address</label>
                                                             <div class="col-md-8">
-                                                                <input type="text" class="form-control" id="mac_address_mag" name="mac_address_mag" value="<?php if (isset($rUser)) { echo $rUser["mac_address_mag"]; } else { echo "00:1A:79:"; } ?>">
+                                                                <input type="text" class="form-control" id="mac_address_mag" name="mac_address_mag" value="<?php if (isset($rUser)) { echo $rUser["mac_address_mag"]; } ?>">
                                                             </div>
                                                         </div>
                                                         <div class="form-group row mb-4" style="display:none" id="mac_entry_e2">

@@ -40,7 +40,8 @@ def installBalancer(rDetails):
         rStatus = rOut.channel.recv_exit_status()
     except: pass
     rDetails["status"] = 2
-    writeDetails(rDetails)
+    try: os.remove("%s%d.json" % (rPath, int(rDetails["id"])))
+    except: writeDetails(rDetails)
     return True
 
 if __name__ == "__main__":
